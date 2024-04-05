@@ -1,0 +1,14 @@
+{
+  "name": "helloelectronweb",
+  "version": "0.0.1",
+  "description": "This package never goes anywhere, its only the web side of the electron package.",
+  "author": "zerotrickpony",
+  "license": "Apache Creative Commons 2.0",
+  "scripts": {
+    "build": "tsc --project webtsconfig.json"
+  },
+  "devDependencies": {
+    "@types/jquery": "3.5.29",
+    "typescript": "5.3.3"
+  }
+}

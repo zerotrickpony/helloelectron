@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "outFile": "../out/build/web/compiled.js",
+    "target": "es2015",
+    "module": "amd",
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "lib/js/**/*.js",
+    "../main/src/common/**/*.ts"
+  ]
+}

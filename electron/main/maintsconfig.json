@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "outDir": "../out/build",
+    "target": "es2015",
+    "module": "node16",
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}
