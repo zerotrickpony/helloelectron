@@ -84,6 +84,9 @@ A partial list of problems that this project works around, mostly through wrappe
 - /electron/main/src : Typescript code for the node.js process
 - /electron/main/src/common : Magic directory for typescript code that will also be compiled into the web side
 - /electron/main/lib : any files which are to be forwarded as-is into the electron bundle
+- /electron/main/lib/win : files that should only go into the Windows electron bundle
+- /electron/main/lib/darwin : files that should only go into the MacOS electron bundle
+- /electron/main/lib/linux : files that should only go into the Linux electron bundle
 - /electron/web : root of code and configuration for the renderer process
 - /electron/web/src : Typescript code to be compiled for the renderer process
 - /electron/web/css : CSS source files which to be compiled for the renderer process
@@ -139,3 +142,8 @@ A partial list of problems that this project works around, mostly through wrappe
 #### Run the example in electron's development mode:
 
 
+### How to re-generate the MacOS icns file
+
+- cd electron/main
+- npm install --no-save iconz@0.3.9
+- node node_modules/iconz/bin/iconz.js -i ../art/macos-icon.png --icns=appicon
