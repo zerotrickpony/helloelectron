@@ -114,6 +114,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - ✅ Type safe command dispatch using some sort of IDL or common interface
 - try packaging
 - make a script that works on Windows; port it all to node.js?
+- centrally manage version numbers and stuff, using idk genfiles? or read package.json?
 - get tests working
 - pref support?
 - Filer?
@@ -126,3 +127,15 @@ A partial list of problems that this project works around, mostly through wrappe
 - error message for electronpreload.js.map source map. Could move it to JS? Could get it working?
 - node.js should have source maps but can't be turned on by electron, so i am trying out the "source-map-support"
   which demands a manual line added to every js file.
+
+### Installation
+
+#### First time:
+
+- git clone where/did/you/find/this/repo/helloelectron
+- cd helloelectron
+- electron/scripts/setup.sh
+
+#### Run the example in electron's development mode:
+
+

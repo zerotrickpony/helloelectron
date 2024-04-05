@@ -9,7 +9,7 @@ cd ${SCRIPT_DIR}/..
 
 # Build the node.js process code and prepare dependencies
 cd main
-npm run build
+./node_modules/.bin/tsc --project maintsconfig.json
 cd ..
 
 # Forward static dependencies and NPM dependencies for node.js

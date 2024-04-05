@@ -5,8 +5,13 @@ set -e
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd ${SCRIPT_DIR}/..
 
-./scripts/build.sh
+# Do NPM install
+cd main
+npm install
+cd ..
+cd web
+npm install
+cd ..
 
-cd out/build
-./node_modules/.bin/electron .
-cd -
+# Then build
+./scripts/build.sh

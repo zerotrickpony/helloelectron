@@ -6,8 +6,6 @@
   "author": "zerotrickpony",
   "license": "Apache Creative Commons 2.0",
   "scripts": {
-    "build": "tsc --project maintsconfig.json",
-    "electrondev": "electron .",
     "browsertests": "electron ./electrontest.js",
     "systemtests": "electron ./gentestmain.js",
     "eforgemake": "electron-forge make"
