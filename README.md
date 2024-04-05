@@ -5,9 +5,9 @@
 Electron, Typescript, NPM, Node.js, Electron-Forge, Squirrel, and other tools are very useful,
 but are also full of rough edges and bad opinions. This project demonstrates a file structure
 and build scripts that smoosh these tools together into a usable, capable project. In most
-cases the many inter-operation problems are papered over using codegens and build scripts.
+cases the many inter-operation problems are papered over using codegens and/or build scripts.
 Although not ideal, this is often the only way to get these tools to work. The resulting
-arrangemnt is surprisingly fragile, so tinker with caution.
+arrangemnt is fragile, so tinker with caution.
 
 ### Objective
 
@@ -72,6 +72,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - BAT files (Windows only, mostly they just run node.js)
 - Sass (for CSS)
 - source-map-support (a workaround for typescript sources in stack traces)
+- VSCode emeraldwalk.runonsave extension (for running build scripts on file save)
 
 
 ### File structure
@@ -84,10 +85,10 @@ A partial list of problems that this project works around, mostly through wrappe
 - /electron/main/src/common : Magic directory for typescript code that will also be compiled into the web side
 - /electron/main/lib : any files which are to be forwarded as-is into the electron bundle
 - /electron/web : root of code and configuration for the renderer process
-- /electron/web/src : Typescript code for the renderer process
+- /electron/web/src : Typescript code to be compiled for the renderer process
+- /electron/web/css : CSS source files which to be compiled for the renderer process
 - /electron/web/lib : Resources like images and CSS which will be served into the renderer
 - /electron/web/lib/js : If there are any non-TS files to be served directly, they go here
-- /electron/web/lib/css : CSS source files which are served as resources into the renderer
 - /electron/web/lib/images : Image source files available to the renderer
 - /electron/web/lib/data : If present, any other kind of includable resource for the web side
 - /electron/test : place for tests to be authored.
@@ -96,7 +97,10 @@ A partial list of problems that this project works around, mostly through wrappe
 - /electron/out : all temporary build products go here
 - /electron/out/build : runnable files for electron to run in place during development and test
 - /electron/out/build/web : files that will be served into the renderer
-- /electron/out/build/web/js : the compiled typescript and source
+- /electron/out/build/web/compiled.js : all TS source for the renderer in one monolith
+- /electron/out/build/web/compiled.css : all CSS for the renderer in one monolith
+- /electron/out/build/web/web/src : the original typescript files, only here for debugging (remove to obfuscate)
+- /electron/out/build/web/lib : original images, raw js, and data, forwarded as-is into the build package
 - /electron/out/dist : the build area for the current platform's packager
 - /electron/out/testdata : a copy of /test/data which is copied between each test run, accessed during tests
 
@@ -104,15 +108,16 @@ A partial list of problems that this project works around, mostly through wrappe
 
 - ✅ get ts working in main process in a basic way
 - ✅ try compiled.js and see if source map works in renderer
+- ✅ make a "just the web" compilation script
+- ✅ try using "sass" for CSS compilation: https://sass-lang.com/guide/#example-variables-scss
+- ✅ ErrorReport class
+- ✅ Type safe command dispatch using some sort of IDL or common interface
 - try packaging
-- make a "just the web" compilation script
-- try using "sass" for CSS compilation: https://sass-lang.com/guide/#example-variables-scss
 - make a script that works on Windows; port it all to node.js?
-- ErrorReport class?
 - get tests working
 - pref support?
 - Filer?
-- Type safe command dispatch using some sort of IDL or common interface
+- mix in raw JS?
 
 
 ### Known issues

@@ -1,8 +1,11 @@
-#!/bin/bash
+#!/bin/bash -l
 
 set -e
 
 # TODO - convert this to node
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd ${SCRIPT_DIR}/..
 
 # Build the node.js process code and prepare dependencies
 cd main
@@ -17,15 +20,5 @@ ln -s $PWD/main/lib out/build/lib
 # Package.json is read by electron to make build decisions. TODO - platform specific changes here
 ln -sf $PWD/main/package.json out/build/package.json
 
-# Build the web side; unlike node this goes all into one big JS file
+# Build the products needed for the render process
 ./scripts/buildweb.sh
-
-# Forward static resources
-cp web/lib/boot/require.js out/build/web/require.js
-rm -f out/build/web/lib/js out/build/web/lib/images out/build/web/web/src
-ln -s $PWD/web/lib/js out/build/web/lib/js
-ln -s $PWD/web/lib/images out/build/web/lib/images
-
-# Forward typescript source so that the source maps work in the renderer
-mkdir -p out/build/web/web
-ln -s $PWD/web/src out/build/web/web/src

@@ -3,5 +3,21 @@
 		{
 			"path": "."
 		}
-	]
+  ],
+  "settings": {
+    "emeraldwalk.runonsave": {
+      "commands": [
+          {
+              "match": "electron/web/.*",
+              "isAsync": true,
+              "cmd": "electron/scripts/buildweb.sh"
+          },
+          {
+            "match": "electron/main/.*",
+            "isAsync": true,
+            "cmd": "electron/scripts/build.sh"
+          }
+      ]
+    }
+  }
 }

@@ -7,6 +7,12 @@ BODY {
   font-family: Helvetica, Arial, sans-serif;
 }
 
+#main {
+  width: 500px;
+  padding: 10px;
+  color: green;
+}
+
 .hidden-element {
   display: none !important;
 }
