@@ -1,0 +1,4 @@
+electron/out
+electron/main/node_modules
+electron/web/node_modules
+.DS_Store
