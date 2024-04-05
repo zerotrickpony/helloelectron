@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- TODO - these appear incompatible with jquery? How can i appease it
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="img-src 'self' electronresource: localfile: thumbdata:; default-src 'self'; script-src 'self'"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="img-src 'self' electronresource: localfile: thumbdata:; default-src 'self' http://XX.XX.XX.XX:8084/mypp/">
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="img-src 'self' electronresource: localfile: thumbdata:; default-src 'self'; script-src 'self'"
+    />
+    -->
+    <title>Hello</title>
+    <link rel="stylesheet" type="text/css" href="electronresource://web/compiled.css">
+    <script src="electronresource://web/require.js"></script>
+    <script>
+      requirejs.config({
+          baseUrl: 'electronresource://web',
+          paths: {
+              'web/src/main': 'compiled',
+              'jquery': 'lib/js/jquery-1.10.2',
+              'jquery-hashchange': 'lib/js/jquery-hashchange'
+          }
+      });
+      requirejs(['web/src/main']);
+    </script>
+    <!--__TEST_DRIVER_INJECTION_POINT__-->
+  </head>
+  <body>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+BODY {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  color: #eee;
+  background-color: #000;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.hidden-element {
+  display: none !important;
+}
+
+.dialog {
+  min-width: 50%;
+  padding: 15px;
+
+  color: #fff;
+  background-color: rgba(80,80,80,0.8);
+  border: 3px solid rgba(120,120,120,0.8);
+  border-radius: 15px;
+  font-size: 14px;
+  font-weight: bold;
+}

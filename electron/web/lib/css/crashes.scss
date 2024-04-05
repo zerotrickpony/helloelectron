@@ -1,0 +1,87 @@
+#erroroverlay {
+  position: fixed;
+  z-index: 9200;
+  left: 0;
+  top: 0;
+  min-width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+
+  margin: 0;
+  padding: 0;
+
+  backdrop-filter: blur(5px);
+  background-color: rgba(0,0,0,0.5);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .dialog {
+    color: #ddd;
+    font-weight: normal;
+
+    .errorreport {
+      max-height: 90vh;
+      max-width: 90vw;
+      z-index: 9201;
+
+      display: flex;
+      flex-direction: column;
+      row-gap: 10px;
+
+      A {
+        font-size: 16px;
+        color: #eef;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .title {
+    font-weight: bold;
+    font-size: 25px;
+  }
+
+  BUTTON {
+    margin-bottom: -5px;
+    align-self: flex-start;
+    cursor: pointer;
+  }
+
+  BUTTON:hover {
+    background-color: #333;
+    color: #fd0;
+  }
+
+  .subtitle,.next {
+    font-weight: normal;
+    font-size: 14px;
+  }
+
+  .errorbox {
+    max-height: 40vh;
+    overflow: scroll;
+    white-space: pre;
+    font-family: monospace;
+    font-size: 11px;
+
+    padding: 20px;
+    border: 1px solid #fff8;
+    color: #444;
+    background-color: #fff;
+  }
+
+  .buttons {
+    display: flex;
+    justify-content: center;
+    column-gap: 10px;
+  }
+
+  .buttons BUTTON {
+    width: 15em;
+    font-size: 18px;
+    padding: 6px 10px 6px 10px;
+    border-radius: 6px;
+  }
+}
