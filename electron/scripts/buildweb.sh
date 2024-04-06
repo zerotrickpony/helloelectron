@@ -18,7 +18,7 @@ main/node_modules/.bin/sass web/css:out/sass
 echo "/* ALL COMPILED CSS */" > out/build/web/compiled.css
 for cssfile in `find out/sass -name '*.css'`; do
   echo "/* $cssfile */" >> out/build/web/compiled.css
-  cat $cssfile >> out/build/web/compiled.css
+  cat $cssfile | grep -v '# sourceMappingURL' >> out/build/web/compiled.css
 done
 
 # Forward static resources and typescript source
