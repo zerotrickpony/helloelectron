@@ -56,10 +56,8 @@ export class IpcHandler implements MainIpc {
     const fakeArgv = s.fakeArgv.get(s.testName ? s.testName : '');
     if (fakeArgv) {
       // We're currently running a test that wants fake command line parameters
-      console.log(`getArgv: returning fake`);
       return fakeArgv;
     } else {
-      console.log(`getArgv: returning process.argv`);
       return process.argv;
     }
   }

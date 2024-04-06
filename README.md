@@ -115,10 +115,12 @@ A partial list of problems that this project works around, mostly through wrappe
 - ✅ try using "sass" for CSS compilation: https://sass-lang.com/guide/#example-variables-scss
 - ✅ ErrorReport class
 - ✅ Type safe command dispatch using some sort of IDL or common interface
-- try packaging
-- make a script that works on Windows; port it all to node.js?
-- centrally manage version numbers and stuff, using idk genfiles? or read package.json?
+- ✅ try packaging
+- port the scripts to node.js
 - get tests working
+- updater scheme / OTA update support
+- test it on windows and linux and darwintel
+- centrally manage version numbers and stuff, using idk genfiles? or read package.json?
 - pref support?
 - Filer?
 - mix in raw JS?
@@ -126,12 +128,26 @@ A partial list of problems that this project works around, mostly through wrappe
 
 ### Known issues
 
-- ts source is forwarded to a kooky place (web/web)
-- error message for electronpreload.js.map source map. Could move it to JS? Could get it working?
-- node.js should have source maps but can't be turned on by electron, so i am trying out the "source-map-support"
+#### Security considerations
+
+- The electron version is pinned at 20.3.5. Versions after this significantly overhauled the
+  IPC and source loading facilities, to treat web source as more untrusted in some way. I think
+  this is reasonable for people who are using Electron to download and execute code from the
+  internet... but IMO a better approach is not to architect your Electron app that way. Executing
+  ANY code from the internet is going to carry risk, and it's easier (and makes more sense) to
+  simply run only bundled code.
+- "Electron Security Warning" shows up in the dev console for unpackaged apps. I think if you want
+  to use things like jquery within your render process, this is unavoidable?
+
+#### Misc
+
+- An error message for electronpreload.js.map source map is shown in the dev console, because
+  the preload js is loaded an a special way that can't also accomodate source mapping.
+- node.js should have source maps but can't be turned on by electron, so i am using the "source-map-support"
   which demands a manual line added to every js file.
 - Forge manipulates NPM during its build process, so an npm install is necessary to
   recover from the packager's behavior. This means we depend on NPM's servers for packaging.
+- The ts source for dev console source mapping is forwarded to a kooky place (web/web)
 
 ### Installation
 
@@ -143,6 +159,12 @@ A partial list of problems that this project works around, mostly through wrappe
 
 #### Run the example in electron's development mode:
 
+- electron/scripts/run.sh
+
+#### Package the app for MacOS:
+
+- electron/scripts/package_darwin_arm64.sh
+- open ./electron/out/dist/helloelectron.app
 
 ### How to re-generate the MacOS icns file
 
