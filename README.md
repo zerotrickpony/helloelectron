@@ -130,6 +130,8 @@ A partial list of problems that this project works around, mostly through wrappe
 - error message for electronpreload.js.map source map. Could move it to JS? Could get it working?
 - node.js should have source maps but can't be turned on by electron, so i am trying out the "source-map-support"
   which demands a manual line added to every js file.
+- Forge manipulates NPM during its build process, so an npm install is necessary to
+  recover from the packager's behavior. This means we depend on NPM's servers for packaging.
 
 ### Installation
 
