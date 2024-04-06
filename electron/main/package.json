@@ -7,8 +7,7 @@
   "license": "Apache Creative Commons 2.0",
   "scripts": {
     "browsertests": "electron ./electrontest.js",
-    "systemtests": "electron ./gentestmain.js",
-    "eforgemake": "electron-forge make"
+    "systemtests": "electron ./gentestmain.js"
   },
   "dependencies": {
     "better-sqlite3": "8.0.1",
