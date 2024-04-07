@@ -7,20 +7,41 @@
 import fs from 'fs';
 import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readFileLines} from './_base.js';
 
+const COMMANDS = new Map([
+  ['setup', ['First time installation and build',
+      cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss]],
+  ['clean', ['Erases all build output',
+      cleanOut, buildMain, buildWeb, buildCss]],
+  ['build', ['Builds the electron project for development mode',
+      buildMain, buildWeb, buildCss]],
+  ['web', ['Builds just the render process Typescript and CSS',
+      buildWeb, buildCss]],
+  ['css', ['Builds just the CSS',
+      buildCss]],
+  ['run', ['Builds and runs the Electron app in development mode',
+      buildMain, buildWeb, buildCss, runDev]],
+  ['help', ['Prints this help message',
+      printHelp]]
+]);
+
+const HELP = new Map([
+  [cleanOut, 'Erases all build and package output'],
+  [cleanNpm, 'Erases all node_modules so they can be npm installed again'],
+  [install, 'Performs NPM install on both main and render process sub-modules'],
+  [buildMain, 'Build typescript and electron dependencies for the main process'],
+  [buildWeb, 'Builds typescript into compiled.js and electron dependencies for the render process'],
+  [buildCss, 'Builds the CSS into compiled.css'],
+  [runDev, 'Quickly launches the Electron app in development mode (pre-packaged)'],
+  [printHelp, 'Shows this help message']
+]);
+
 function parseSteps() {
   const text = process.argv[process.argv.length - 1];
-  if (text.toLowerCase() == 'setup') {
-    return [cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss];
-  } else if (text.toLowerCase() == 'web') {
-    return [buildWeb, buildCss];
-  } else if (text.toLowerCase() === 'css') {
-    return [buildCss];
-  } else if (text.toLowerCase() === 'run') {
-    return [buildMain, buildWeb, buildCss, runDev];
-  } else if (text.toLowerCase() === 'clean') {
-    return [cleanOut, buildMain, buildWeb, buildCss];
-  } else {  // normal full build
-    return [buildMain, buildWeb, buildCss];
+  const commands = COMMANDS.get(text.toLowerCase());
+  if (!commands) {
+    return COMMANDS.get('build').slice(1);
+  } else {
+    return commands.slice(1);
   }
 }
 
@@ -105,4 +126,14 @@ async function runDev() {
   const p = projectPath('out/build');
   const electron = projectPath('out/build/node_modules/.bin/electron');
   await execScript(p, electron, '.');
+}
+
+function printHelp() {
+  console.log(`
+Syntax: node ./scripts/builder.js <command>
+
+Where the command is one of:`);
+  for (const [command, helpAndSteps] of COMMANDS) {
+    console.log(`"${command}": ${helpAndSteps[0]}`);
+  }
 }
