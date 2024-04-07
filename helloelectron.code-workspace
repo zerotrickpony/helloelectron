@@ -7,16 +7,21 @@
   "settings": {
     "emeraldwalk.runonsave": {
       "commands": [
-          {
-              "match": "electron/web/.*",
-              "isAsync": true,
-              "cmd": "electron/scripts/buildweb.sh"
-          },
-          {
-            "match": "electron/main/.*",
-            "isAsync": true,
-            "cmd": "electron/scripts/build.sh"
-          }
+        {
+          "match": "electron/web/src/.*",
+          "isAsync": true,
+          "cmd": "source ~/.bash_profile && node electron/scripts/build.js web"
+        },
+        {
+          "match": "electron/web/css/.*",
+          "isAsync": true,
+          "cmd": "source ~/.bash_profile && node electron/scripts/build.js css"
+        },
+        {
+          "match": "electron/main/.*",
+          "isAsync": true,
+          "cmd": "source ~/.bash_profile && node electron/scripts/build.js all"
+        }
       ]
     }
   }
