@@ -1,5 +1,7 @@
 # Electron project template
 
+## Overview
+
 ### Motivation
 
 Electron, Typescript, NPM, Node.js, Electron-Forge, Squirrel, and other tools are very useful,
@@ -56,6 +58,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - Typescript won't generate code that inter-operates with in-place source, so all resources must be copied
 - VSCode tries to parse the tsconfig itself, and won't understand nuance from multi-armed build systems or codegens
 - NPM defaults to auto-updating packages which often breaks them
+- The Squirrel windows installer is of the rather wild opinion that it should have no options or confirmations.
 
 ### Dependencies
 
@@ -65,7 +68,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - typescript
 - electron-forge
 - requirejs (for bootstrapping JS modules into the render process)
-- squirrel (for the windows installer)
+- squirrel (for the windows installer, and the OTA updater)
 - better-sqlite3 (not necessary but proves that NPM works)
 - VSCode (not a build dependency but implicit in the environment)
 - Bash (there are a few short bash scripts on non-Windows)
@@ -79,7 +82,7 @@ A partial list of problems that this project works around, mostly through wrappe
 
 - / : root of your project, put whatever you want in here
 - /electron : root of all code that will be part of electron
-- /electron/scripts : scripts which do builds, run tests, and release packaging
+- /electron/scripts : the builder.js script which does everything
 - /electron/main : root of code and configuration for the node.js process
 - /electron/main/src : Typescript code for the node.js process
 - /electron/main/src/common : Magic directory for typescript code that will also be compiled into the web side
@@ -117,6 +120,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - ✅ Type safe command dispatch using some sort of IDL or common interface
 - ✅ try packaging
 - port the scripts to node.js
+- strip out the source map from electronpreload.js to get rid of the error message
 - get tests working
 - updater scheme / OTA update support
 - test it on windows and linux and darwintel
@@ -126,7 +130,31 @@ A partial list of problems that this project works around, mostly through wrappe
 - mix in raw JS?
 
 
-### Known issues
+## Getting Started
+
+#### First time:
+
+- git clone where/did/you/find/this/repo/helloelectron
+- cd helloelectron
+- electron/scripts/setup.sh
+
+#### Run the example in electron's development mode:
+
+- node electron/scripts/builder.js run
+
+#### Package the app for MacOS:
+
+- electron/scripts/package_darwin_arm64.sh
+- open ./electron/out/dist/helloelectron.app
+
+### How to re-generate the MacOS icns file
+
+- cd electron/main
+- npm install --no-save iconz@0.3.9
+- node node_modules/iconz/bin/iconz.js -i ../art/macos-icon.png --icns=appicon
+
+
+## Known issues
 
 #### Security considerations
 
@@ -139,35 +167,16 @@ A partial list of problems that this project works around, mostly through wrappe
 - "Electron Security Warning" shows up in the dev console for unpackaged apps. I think if you want
   to use things like jquery within your render process, this is unavoidable?
 
-#### Misc
+#### Debugging
 
 - An error message for electronpreload.js.map source map is shown in the dev console, because
   the preload js is loaded an a special way that can't also accomodate source mapping.
 - node.js should have source maps but can't be turned on by electron, so i am using the "source-map-support"
   which demands a manual line added to every js file.
-- Forge manipulates NPM during its build process, so an npm install is necessary to
-  recover from the packager's behavior. This means we depend on NPM's servers for packaging.
 - The ts source for dev console source mapping is forwarded to a kooky place (web/web)
 
-### Installation
+#### Directory structure and extraneous files
 
-#### First time:
-
-- git clone where/did/you/find/this/repo/helloelectron
-- cd helloelectron
-- electron/scripts/setup.sh
-
-#### Run the example in electron's development mode:
-
-- electron/scripts/run.sh
-
-#### Package the app for MacOS:
-
-- electron/scripts/package_darwin_arm64.sh
-- open ./electron/out/dist/helloelectron.app
-
-### How to re-generate the MacOS icns file
-
-- cd electron/main
-- npm install --no-save iconz@0.3.9
-- node node_modules/iconz/bin/iconz.js -i ../art/macos-icon.png --icns=appicon
+- Forge manipulates NPM during its build process, so an npm install is necessary to
+  recover from the packager's behavior. This means we depend on NPM's servers for packaging.
+- The scripts directory has to have a package.json file to appease node.js for modules
