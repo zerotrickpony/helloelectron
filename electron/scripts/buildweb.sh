@@ -10,7 +10,7 @@ cd ${SCRIPT_DIR}/..
 # Build the web side; unlike node this goes all into one big JS file
 mkdir -p out/build/web/lib
 cd web
-./node_modules/.bin/tsc --project webtsconfig.json
+./node_modules/.bin/tsc --project web_tsconfig.json
 cd ..
 
 # Compile with SASS and then merge into one file
