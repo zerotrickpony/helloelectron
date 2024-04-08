@@ -59,6 +59,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - VSCode tries to parse the tsconfig itself, and won't understand nuance from multi-armed build systems or codegens
 - NPM defaults to auto-updating packages which often breaks them
 - The Squirrel windows installer is of the rather wild opinion that it should have no options or confirmations.
+- The "iconz" tool that I found for generating MacOS ICNS files only actually runs correctly on MacOS hosts
 
 ### Dependencies
 
@@ -80,6 +81,8 @@ A partial list of problems that this project works around, mostly through wrappe
 
 ### File structure
 
+#### Source code and dependencies
+
 - / : root of your project, put whatever you want in here
 - /electron : root of all code that will be part of electron
 - /electron/scripts : the builder.js script which does everything
@@ -95,19 +98,36 @@ A partial list of problems that this project works around, mostly through wrappe
 - /electron/web/css : CSS source files which to be compiled for the renderer process
 - /electron/web/lib : Resources like images and CSS which will be served into the renderer
 - /electron/web/lib/js : If there are any non-TS files to be served directly, they go here
+
+#### Assets
+
+- /electron/art/appicon.png : The icon graphic which will be used as the live app icon on Windows and Linux
+- /electron/art/macos-icon.png : A separate graphic for the Apple style guide which will show in the MacOS dock
+- /electron/main/lib/win/installation.gif : The Winstaller installation animated GIF
 - /electron/web/lib/images : Image source files available to the renderer
 - /electron/web/lib/data : If present, any other kind of includable resource for the web side
+
+#### Test code
+
 - /electron/test : place for tests to be authored.
 - /electron/test/src : Typescript test source code. Must instantiate objects that extend ElectronTest
 - /electron/test/data : Data that's available to each test. This is cloned on each test run
+
+#### Generated outputs
+
 - /electron/out : all temporary build products go here
 - /electron/out/build : runnable files for electron to run in place during development and test
 - /electron/out/build/web : files that will be served into the renderer
+- /electron/out/build/web/appicon.png : Windows and Linux app window icon
+- /electron/out/build/web/appicon.icns : Generated MacOS dock icon (darwin only)
+- /electron/out/build/web/appicon.ico : Windows package icon
 - /electron/out/build/web/compiled.js : all TS source for the renderer in one monolith
 - /electron/out/build/web/compiled.css : all CSS for the renderer in one monolith
 - /electron/out/build/web/web/src : the original typescript files, only here for debugging (remove to obfuscate)
 - /electron/out/build/web/lib : original images, raw js, and data, forwarded as-is into the build package
-- /electron/out/dist : the build area for the current platform's packager
+- /electron/out/sass : temporary SASS compiler output
+- /electron/out/package : staging area for Electron-Forge packager
+- /electron/out/dist : The packaged Electron app and associated updater files will land here
 - /electron/out/testdata : a copy of /test/data which is copied between each test run, accessed during tests
 
 ### TODO
@@ -136,7 +156,7 @@ A partial list of problems that this project works around, mostly through wrappe
 
 - git clone where/did/you/find/this/repo/helloelectron
 - cd helloelectron
-- electron/scripts/setup.sh
+- node electron/scripts/builder.js setup
 
 #### Run the example in electron's development mode:
 

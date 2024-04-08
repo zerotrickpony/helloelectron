@@ -78,6 +78,34 @@ export async function execScript(cwd, ...commandAndArgs) {
   }
 }
 
+// Same as above, but returns stdout instead of streaming it to
+export async function execScriptAndGetResult(cwd, ...commandAndArgs) {
+  const buffers = [];
+  const p = new Promise((resolve, reject) => {
+    const command = commandAndArgs[0];
+    const args = commandAndArgs.slice(1);
+    const options = {cwd};
+    const p = spawn(command, args, options);
+    p.stdout.on('data', (data) => {
+      buffers.push(data);
+    });
+    p.stderr.on('data', (data) => {
+      process.stderr.write(data);
+    });
+    p.on('close', (code) => {
+      resolve({code});
+    });
+    p.on('error', (error) => reject({error}));
+  });
+
+  const {code} = await p;
+  if (code != 0) {
+    console.error(`Failed (${code}): ${commandAndArgs.join(' ')}`);
+    throw new Error('STOP_BUILD');
+  }
+  return Buffer.concat(buffers);
+}
+
 // Returns true if te given path is an existing symlink
 export function isSymlinkSync(linkName) {
   try {
@@ -111,7 +139,6 @@ export async function runSteps(fn) {
   }
 }
 
-
 // Returns the absolute paths of all regular files recursively in the given directory.
 export function listDirR(path) {
   const result = [];
@@ -127,4 +154,14 @@ export function listDirR(path) {
   };
   rscan('');
   return result;
+}
+
+// Deletes whatever is at the given path. Sync.
+export function rmProjectFile(p) {
+  const path = projectPath(p);
+  if (isSymlinkSync(path)) {
+    fs.unlinkSync(path);
+  } else {
+    fs.rmSync(path, {recursive: true, force: true});
+  }
 }
