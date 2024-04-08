@@ -6,7 +6,7 @@
 
 import fs from 'fs';
 import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readFileLines,
-        execScriptAndGetResult, rmProjectFile, parsePackageJson} from './_base.js';
+        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap} from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -89,6 +89,9 @@ async function buildMain() {
   const tsc = projectPath('main/node_modules/.bin/tsc');
   await execScript(main, tsc, '--project', 'main_tsconfig.json');
 
+  // The source map for electronpreload.ts can never work because it's unservable
+  stripSourceMap(projectPath('out/build/electronpreload.js'));
+
   // Forward node_modules into the build directory using symlinks
   symlinkSync(projectPath('main/node_modules'), projectPath('out/build/node_modules'));
   symlinkSync(projectPath('main/lib'), projectPath('out/build/lib'));
@@ -124,13 +127,10 @@ async function buildCss() {
   let lines = ['/* ALL COMPILED CSS */'];
   for (const cssPath of listDirR(projectPath('out/sass'))) {
     if (cssPath.toLowerCase().endsWith('.css')) {
+      stripSourceMap(cssPath);
       const suffix = cssPath.substring(projectPath('out/sass').length);
       lines.push(`/* ${suffix} */`);
-      for (const line of await readFileLines(cssPath)) {
-        if (line.indexOf('# sourceMappingURL') == -1) {  // strip out source maps
-          lines.push(line);
-        }
-      }
+      lines.push('' + fs.readFileSync(cssPath));
     }
   }
   fs.writeFileSync(projectPath('out/build/web/compiled.css'), lines.join('\n'));

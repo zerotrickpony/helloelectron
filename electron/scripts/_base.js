@@ -176,3 +176,9 @@ export function parsePackageJson() {
     throw new Error('STOP_BUILD');
   }
 }
+
+// Erases all occurrences of "sourceMappingURL" from a text file.
+export function stripSourceMap(path) {
+  const text = '' + fs.readFileSync(path);
+  fs.writeFileSync(path, text.replace(/sourceMappingURL/g, ''));
+}

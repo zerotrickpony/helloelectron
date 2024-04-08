@@ -139,12 +139,15 @@ A partial list of problems that this project works around, mostly through wrappe
 - ✅ ErrorReport class
 - ✅ Type safe command dispatch using some sort of IDL or common interface
 - ✅ try packaging
-- port the scripts to node.js
-- strip out the source map from electronpreload.js to get rid of the error message
+- ✅ port the scripts to node.js
+- ✅ strip out the source map from electronpreload.js to get rid of the error message
+- Logger facility
 - get tests working
+- bumpversion utility
 - updater scheme / OTA update support
-- test it on windows and linux and darwintel
-- centrally manage version numbers and stuff, using idk genfiles? or read package.json?
+- test packaging: Linux
+- test packaging: Win
+- test packaging: Mac x64
 - pref support?
 - Filer?
 - mix in raw JS?
@@ -162,16 +165,24 @@ A partial list of problems that this project works around, mostly through wrappe
 
 - node electron/scripts/builder.js run
 
-#### Package the app for MacOS:
+#### Package the hello app for MacOS:
 
-- electron/scripts/package_darwin_arm64.sh
+- node electron/scripts/builder.js package
 - open ./electron/out/dist/helloelectron.app
 
-### How to re-generate the MacOS icns file
+#### Make your own app:
 
-- cd electron/main
-- npm install --no-save iconz@0.3.9
-- node node_modules/iconz/bin/iconz.js -i ../art/macos-icon.png --icns=appicon
+This is meant to be a template, not a tool, meaning that to use these patterns in your own
+app, you will mostly clone this structure and modify the files. I didn't try to package this
+example as a library, or make it easy to take new versions of this example in the future. So:
+
+1. change electron/main/package.json:
+  - Set "name" to the application name, which will become the DEB and installer name also.
+  - Set "version" to an appropriate semver. You can use builder.js bumpversion later.
+  - Set "description" to a description of your app, I think this ends up in some metadata.
+  - Set "author" to yourself
+  - Set "license" to whatever is appropriate for your project.
+  - Set "updatehost" to the URL where you will place self-updater descriptor files
 
 
 ## Known issues
@@ -189,11 +200,11 @@ A partial list of problems that this project works around, mostly through wrappe
 
 #### Debugging
 
-- An error message for electronpreload.js.map source map is shown in the dev console, because
-  the preload js is loaded an a special way that can't also accomodate source mapping.
 - node.js should have source maps but can't be turned on by electron, so i am using the "source-map-support"
   which demands a manual line added to every js file.
 - The ts source for dev console source mapping is forwarded to a kooky place (web/web)
+- The electronpreload.js cannot have a source map, because that file is loaded in a special way
+  that doesn't permit its corresponding source map file to ever be accessible.
 
 #### Directory structure and extraneous files
 
