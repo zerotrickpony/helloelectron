@@ -3,7 +3,7 @@ const path = require('path');
 module.exports = {
   packagerConfig: {
     executableName: 'helloelectron',
-    icon: 'web/lib/images/appicon',
+    icon: 'web/appicon',
     osxSign: {},
   },
   rebuildConfig: {},

@@ -69,7 +69,7 @@ export class Main {
 
   private createWindow(): BrowserWindow {
     const win = new BrowserWindow({
-      icon: nodepath.join(__dirname, 'web/lib/images/favicon.png'),
+      icon: nodepath.join(__dirname, 'web/appicon.png'),
       webPreferences: {
         preload: nodepath.join(__dirname, './electronpreload.js'),
       },
