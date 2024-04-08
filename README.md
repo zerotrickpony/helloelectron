@@ -60,6 +60,9 @@ A partial list of problems that this project works around, mostly through wrappe
 - NPM defaults to auto-updating packages which often breaks them
 - The Squirrel windows installer is of the rather wild opinion that it should have no options or confirmations.
 - The "iconz" tool that I found for generating MacOS ICNS files only actually runs correctly on MacOS hosts
+- The self-updating systems available for Electron are VERY over-complicated. Some of them demand needless
+  client-side complexity, and some of them refuse to work without running a live server with a Reddis cluster
+  (lol) and other Things That Are Not Simply A Static File. For this demo I have trimmed down what's needed.
 
 ### Dependencies
 
@@ -141,6 +144,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - ✅ try packaging
 - ✅ port the scripts to node.js
 - ✅ strip out the source map from electronpreload.js to get rid of the error message
+- write out updateinfo.json as part of packaging
 - Logger facility
 - get tests working
 - bumpversion utility
@@ -149,8 +153,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - test packaging: Win
 - test packaging: Mac x64
 - pref support?
-- Filer?
-- mix in raw JS?
+- demonstrate mixing in raw JS?
 
 
 ## Getting Started
@@ -177,12 +180,19 @@ app, you will mostly clone this structure and modify the files. I didn't try to 
 example as a library, or make it easy to take new versions of this example in the future. So:
 
 1. change electron/main/package.json:
-  - Set "name" to the application name, which will become the DEB and installer name also.
-  - Set "version" to an appropriate semver. You can use builder.js bumpversion later.
+  - Set "name" to the application name. This will become the DEB and installer name also;
+    the Forge builder may choke on this if it's got capital letters, dashes, or whitespace.
+    So for the sake of simplicity I kept it an all lower case single term.
+  - Set "version" to an appropriate semver like 1.12.6.The builder.js "bumpversion" command
+    will increment this and leave behind the prior version in "previousversion", see below.
   - Set "description" to a description of your app, I think this ends up in some metadata.
   - Set "author" to yourself
   - Set "license" to whatever is appropriate for your project.
-  - Set "updatehost" to the URL where you will place self-updater descriptor files
+  - Set "updatehost" to the URL where you will place self-updater descriptor files. The self
+    updater will look at this directory for an appropriately named updateinfo.json file.
+    builder.js "package" will generate this file and print out instructions for placing it.
+  - Set "previousversion" to whatever the prior semver was, if any. The builder.js "bumpversion"
+    command will update this field.
 
 
 ## Known issues
