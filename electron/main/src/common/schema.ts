@@ -28,6 +28,7 @@ export interface IpcResult {
 export interface PlatformInfo {
   appVersion: string;
   platform: string;
+  updateUrl: string;
   homedir: string;  // path of the user's home directory
   argv: string[];  // the process argv, possibly overriden for testing
   cwd: string;  // the CWD of the current process

@@ -3,6 +3,7 @@ import {app, BrowserWindow} from 'electron';
 import {Main} from './electronmain';
 import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData} from './common/schema';
 import {fork} from './common/commonutil';
+import {readPackagePropertyFile, getHomeDir} from './util';
 
 // TODO - import {SelfUpdater} from './selfupdater';
 
@@ -11,6 +12,7 @@ export class IpcHandler implements MainIpc {
   win: BrowserWindow;
   systemTestData = new TestData();
   browserClient: IpcClient;
+  platformInfo?: PlatformInfo;  // set on first use
 
   constructor(main: Main, opt_systemTestData?: TestData) {
     // TODO this.updater = new SelfUpdater(this);
@@ -42,13 +44,19 @@ export class IpcHandler implements MainIpc {
   }
 
   async getPlatformInfo(): Promise<PlatformInfo> {
-    return {
-      appVersion: app.getVersion(),
-      platform: process.platform,
-      homedir: '', // TODO - fshome(),
-      argv: this.getArgv(),
-      cwd: process.cwd()
+    if (!this.platformInfo) {
+      const updateUrl = readPackagePropertyFile('updateinfo.txt');
+
+      this.platformInfo = {
+        appVersion: app.getVersion(),
+        updateUrl: updateUrl ?? '',
+        platform: process.platform,
+        homedir: getHomeDir(),
+        argv: this.getArgv(),
+        cwd: process.cwd()
+      }
     }
+    return this.platformInfo;
   }
 
   private getArgv(): string[] {
