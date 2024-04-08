@@ -25,6 +25,7 @@
     "@types/better-sqlite3": "7.6.9",
     "@types/source-map-support": "0.5.10",
     "electron": "20.3.5",
+    "png-to-ico": "2.1.8",
     "sass": "1.74.1",
     "typescript": "5.3.3"
   }
