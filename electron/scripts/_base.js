@@ -165,3 +165,14 @@ export function rmProjectFile(p) {
     fs.rmSync(path, {recursive: true, force: true});
   }
 }
+
+// Fails if package.json can't be parsed
+export function parsePackageJson() {
+  const path = projectPath('main/package.json');
+  try {
+    return JSON.parse(fs.readFileSync(path));
+  } catch (e) {
+    console.error(`Could not parse ${path}`);
+    throw new Error('STOP_BUILD');
+  }
+}

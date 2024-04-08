@@ -5,7 +5,8 @@
 // for distribution, look at ./scripts/package.js instead.
 
 import fs from 'fs';
-import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readFileLines, execScriptAndGetResult, rmProjectFile} from './_base.js';
+import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readFileLines,
+        execScriptAndGetResult, rmProjectFile, parsePackageJson} from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -175,32 +176,26 @@ async function packageElectron() {
   fs.cpSync(projectPath('web/lib/js'), projectPath('out/package/web/lib/js'), {dereference: true, recursive: true});
   fs.cpSync(projectPath('web/lib/images'), projectPath('out/package/web/lib/images'), {dereference: true, recursive: true});
 
-  // Erase platform-specific assets that aren't needed
-  const unwanted = new Set(['darwin', 'win', 'linux']);
-  if (process.platform == 'win32') {
-    unwanted.delete('win');
-  } else if (process.platform == 'darwin') {
-    unwanted.delete('darwin');
-  } else {
-    unwanted.delete('linux');
+  // Erase platform-specific assets for the other platforms
+  for (const otherPlatform of ['darwin', 'win32', 'linux']) {
+    if (otherPlatform != process.platform) {
+      rmProjectFile(`out/package/lib/${otherPlatform}`);
+      rmProjectFile(`out/package/web/lib/${otherPlatform}`);
+      rmProjectFile(`out/package/web/lib/js/${otherPlatform}`);
+      rmProjectFile(`out/package/web/lib/images/${otherPlatform}`);
+    }
   }
 
-  for (const otherPlatform of unwanted) {
-    rmProjectFile(`out/package/lib/${otherPlatform}`);
-    rmProjectFile(`out/package/web/lib/${otherPlatform}`);
-    rmProjectFile(`out/package/web/lib/js/${otherPlatform}`);
-    rmProjectFile(`out/package/web/lib/images/${otherPlatform}`);
-  }
+  // Parse project metadata from package.json
+  const packageInfo = parsePackageJson();
+  const appname = packageInfo.name;
+  const appversion = packageInfo.version;
+  const arch = process.arch;
+  const plat = process.platform;
+  const host = packageInfo.updatehost;
+  const url = `${host}/${appname}-${plat}-${arch}-updateinfo-${appversion}.json`
 
-  // TODO
-  const appname = 'helloelectron';  // TODO
-  const appversion = '0.0.1';  // TODO
-  const relkey = 'TODO';
-  const arch = 'arm64';  // TODO
-  const plat = process.platform;  // TODO
-  const url = 'TODO';  // "${UPDATEURL}/$RELKEY/${APPNAME}-darwin-arm64-updateinfo-$APPVERSION.json"
-  // # Place the version reflection stuff
-  fs.writeFileSync(projectPath('out/package/lib/relkey.txt'), relkey);
+  // Put the version info within the app so the updater can use it
   fs.writeFileSync(projectPath('out/package/lib/appversion.txt'), appversion);
   fs.writeFileSync(projectPath('out/package/lib/updateinfo.txt'), url);
 
@@ -208,7 +203,7 @@ async function packageElectron() {
   fs.cpSync(projectPath('main/darwin_forge.config.js'), projectPath('out/package/forge.config.js'));
   await execScript(projectPath('out/package'), projectPath('out/package/node_modules/.bin/electron-forge'), 'make');
 
-  // Fix NPM afterwards
+  // Fix NPM afterwards, since Forge prunes away dev dependencies
   await install();
 
   // Stage the zip
@@ -219,11 +214,10 @@ async function packageElectron() {
   if (process.platform === 'darwin') {
     // Also stage the MacOS app
     await execScript(projectPath('out/dist'), 'unzip', projectPath(`out/dist/${zipname}`));
-    console.log(`Runnable MacOS App at ${projectPath(`out/dist/${appname}.app`)}`);
+    console.log(`Run darwin App with: open ${projectPath(`out/dist/${appname}.app`)}`);
   }
 
-  console.log(`Downloadable ${plat} zip at ${projectPath(`out/dist/${zipname}`)}`);
-  // TODO - echo "Executable MacOS Application bundle at out/dist/${APPNAME}"
+    console.log(`Downloadable ${plat} zip : ${projectPath(`out/dist/${zipname}`)}`);
 }
 
 function printHelp() {
