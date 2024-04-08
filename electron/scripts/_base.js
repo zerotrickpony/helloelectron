@@ -6,6 +6,7 @@ import fs from 'fs';
 import events from 'events';
 import readline from 'readline';
 import {fileURLToPath} from 'url';
+import {createHash} from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +18,7 @@ export function projectPath(path, opt_within) {
     while (opt_within.startsWith('/')) {
       opt_within = opt_within.substring(1);
     }
-    subpath += opt_within;
+    subpath += '/' + opt_within;
   }
   return join(__dirname, subpath);
 }
@@ -181,4 +182,18 @@ export function parsePackageJson() {
 export function stripSourceMap(path) {
   const text = '' + fs.readFileSync(path);
   fs.writeFileSync(path, text.replace(/sourceMappingURL/g, ''));
+}
+
+// Returns the trimmed contents of the given file if it exists, or '' otherwise.
+export function readTextFileOr(filename) {
+  const buffer = fs.readFileSync(filename);
+  if (!buffer) {
+    return null;
+  }
+  return buffer.toString().trim();
+}
+
+// Computes the SHA256 of the given file
+export function getSHA256(filename) {
+  return createHash('sha256').update(fs.readFileSync(filename)).digest("hex").toLowerCase();
 }

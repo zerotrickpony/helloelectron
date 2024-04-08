@@ -5,8 +5,8 @@
 // for distribution, look at ./scripts/package.js instead.
 
 import fs from 'fs';
-import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readFileLines,
-        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap} from './_base.js';
+import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readTextFileOr,
+        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap, getSHA256} from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -188,16 +188,13 @@ async function packageElectron() {
 
   // Parse project metadata from package.json
   const packageInfo = parsePackageJson();
-  const appname = packageInfo.name;
-  const appversion = packageInfo.version;
-  const arch = process.arch;
-  const plat = process.platform;
-  const host = packageInfo.updatehost;
-  const url = `${host}/${appname}-${plat}-${arch}-updateinfo-${appversion}.json`
+  const {name, version, updatehost} = packageInfo;
+  const {arch, platform} = process;
+  const updateUrl = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`
 
   // Put the version info within the app so the updater can use it
-  fs.writeFileSync(projectPath('out/package/lib/appversion.txt'), appversion);
-  fs.writeFileSync(projectPath('out/package/lib/updateinfo.txt'), url);
+  fs.writeFileSync(projectPath('out/package/lib/appversion.txt'), version);
+  fs.writeFileSync(projectPath('out/package/lib/updateinfo.txt'), updateUrl);
 
   // Run Forge
   fs.cpSync(projectPath('main/darwin_forge.config.js'), projectPath('out/package/forge.config.js'));
@@ -206,18 +203,78 @@ async function packageElectron() {
   // Fix NPM afterwards, since Forge prunes away dev dependencies
   await install();
 
-  // Stage the zip
-  const zipname = `${appname}-${plat}-${arch}-${appversion}.zip`;
+  // Stage all the output
   fs.mkdirSync(projectPath('out/dist'), {recursive: true});
-  fs.cpSync(projectPath(`out/package/out/make/zip/${plat}/${arch}/${zipname}`), projectPath(`out/dist/${zipname}`));
+  if (process.platform === 'win32') {
+    await stageWin32(packageInfo);
+  } else {
+    await stage(packageInfo);
+  }
+}
+
+// Emits the updateinfo.json file which, once on a web server, will make the app update itself.
+async function stage(packageInfo) {
+  const {name, version, previousversion, updatehost} = packageInfo;
+  const {arch, platform} = process;
+
+  // Stage the zip
+  const zipname = `${name}-${platform}-${arch}-${version}.zip`;
+  const zipfile = projectPath(`out/dist/${zipname}`);
+  fs.renameSync(projectPath(`out/package/out/make/zip/${platform}/${arch}/${zipname}`), zipfile);
+
+  const sha256 = getSHA256(zipfile);
+  const url = `${updatehost}/${zipname}`;
+
+  const updateJsonFile = projectPath(`out/dist/${name}-${platform}-${arch}-updateinfo-${previousversion}.json`);
+  fs.writeFileSync(updateJsonFile, JSON.stringify({url, sha256, release: ''}, null, 2));
 
   if (process.platform === 'darwin') {
-    // Also stage the MacOS app
-    await execScript(projectPath('out/dist'), 'unzip', projectPath(`out/dist/${zipname}`));
-    console.log(`Run darwin App with: open ${projectPath(`out/dist/${appname}.app`)}`);
+    // Also stage the MacOS app for local execution
+    await execScript(projectPath('out/dist'), 'unzip', zipfile);
+    console.log(`Run darwin App with: open ${projectPath(`out/dist/${name}.app`)}`);
   }
 
-    console.log(`Downloadable ${plat} zip : ${projectPath(`out/dist/${zipname}`)}`);
+  console.log(`Update info prepared, roll out updates by publishing:`);
+  console.log('ZIP : ' + zipfile);
+  console.log('JSON: ' + updateJsonFile);
+  console.log('Host: ' + updatehost);
+}
+
+// Same as above but with the extra nupkg scheme stuff
+async function stageWin32(packageInfo) {
+
+  // TODO - this isn't quite right, test and fix
+
+  const {name, version, previousversion, updatehost} = packageInfo;
+  const {arch, platform} = process;
+
+  const sqPath = projectPath('out/package/out/make/squirrel.windows/x64');
+  const nupkgOrig = `${name}-${version}-full.nupkg`;
+  const nupkg = `${name}-win32-x64-${version}.nupkg`;
+  const zipfile = `${name}-win32-x64-${version}-installer.zip`;
+  const setupfile = sqPath + `/${name}-${version} Setup.exe`;
+
+  // Place the nupkg file
+  fs.renameSync(`${sqPath}/${nupkgOrig}`, projectPath(`out/dist/${nupkg}`));
+
+  // Zip the installer exe
+  fs.rmSync(projectPath(`out/dist/${zipfile}`), {force: true});
+  await execScript(projectPath('.'), 'powershell', '-Command',
+      `& {Compress-Archive -Path '${setupfile}' -DestinationPath out/dist/${zipfile}}`);
+
+  // Create the update info file, which old apps in the wild will download
+  const url = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`;
+  const sha256 = getSHA256(projectPath(`out/dist/${nupkg}`));
+  const release = readTextFileOr(`${sqPath}/RELEASES`);
+
+  const updateJsonFile = projectPath(`out/dist/${name}-win32-x64-updateinfo-${previousversion}.json`);
+  fs.writeFileSync(updateJsonFile, JSON.stringify({url, sha256, release}, null, 2));
+  console.log(`Run Winstaller locally with: ${projectPath(`out/make/squirrel.windows/${arch}/${appname}-${appversion} Setup.exe`)}`);
+  console.log(`Update info prepared, roll out updates by publishing these:`);
+  console.log(`Install ZIP: ${projectPath(`out/dist/${zipfile}`)}`);
+  console.log('Update JSON: ' + updateJsonFile);
+  console.log('Update NPKG: ' + projectPath(`out/dist/${nupkg}`));
+  console.log('Host URL   : ' + updatehost);
 }
 
 function printHelp() {
