@@ -16,7 +16,8 @@ export interface MainIpc {
 // The interface from the main process up to the browser process.
 export interface BrowserIpc {
   handleQuitting(): void;
-  handleError(error: string): void;
+  handleFatalError(error: string): void;
+  handleLog(message: string, error: string|undefined): void;
 }
 
 export interface IpcResult {

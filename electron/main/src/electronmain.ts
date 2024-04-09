@@ -1,4 +1,4 @@
-// // TODO
+// // TODO - updater
 // // These kooky things happen when the Windows installer is running us.
 // if (require('electron-squirrel-startup')) return;
 // if (require('./selfupdater').handleSquirrelInstallerEvents()) return;
@@ -11,8 +11,7 @@ import 'better-sqlite3';
 import {app, BrowserWindow, ipcMain, protocol} from 'electron';
 import {IpcHandler} from './mainipc';
 import {TestData} from './common/schema';
-
-// const {Logger} = require('./util');
+import {Logger} from './logger';
 
 type Request = Electron.ProtocolRequest;
 type Response = Electron.ProtocolResponse | string;
@@ -36,11 +35,11 @@ export class Main {
     // Register protocols and app hooks
     protocol.registerFileProtocol('electronresource', (req, fn) => this.serveResource(req, fn));
     ipcMain.handle('command', async (e, req) => await this.ipc.handleMainIpc(req));
-    process.on('unhandledRejection', (e: Error, p) => this.handleError(e));
-    process.on('uncaughtException', (e) => this.handleError(e));
+    process.on('unhandledRejection', (e: Error, p) => this.handleFatalError(e));
+    process.on('uncaughtException', (e) => this.handleFatalError(e));
     app.on('before-quit', e => this.ipc.handleQuitEvent(e));
-    // TODO - Logger.GLOBAL_LOG_HANDLER = m => this.handleLogToIpc_('log', m);
-    // TODO - Logger.GLOBAL_ERROR_HANDLER = (e, m) => this.handleLogToIpc_('error', e, m);
+    Logger.GLOBAL_LOG_HANDLER = m => this.logToIpc(m);
+    Logger.GLOBAL_ERROR_HANDLER = (e, m) => this.logErrorToIpc(e, m);
 
     // Launch the window
     this.win = this.createWindow();
@@ -55,7 +54,7 @@ export class Main {
   }
 
   // Called un unhandled exceptions or promise rejections
-  private handleError(e: Error) {
+  private handleFatalError(e: Error) {
     // TODO - if (e && e.message && e.message == PF_CANCEL_EXCEPTION) {
     //   return;  // ignore normal cancellation exceptions
     // }
@@ -63,7 +62,7 @@ export class Main {
     console.error(e);
     if (this.win) {
       const error = e && e.stack ? e.stack : `${e}`;
-      this.ipc.browserClient.handleError(error);
+      this.ipc.browserClient.handleFatalError(error);
     }
   }
 
@@ -81,29 +80,27 @@ export class Main {
     return win;
   }
 
-  private handleLogToIpc_(type: string, ...args: string[]) {
-    // TODO
-    console.error(`${type}: ${args}`);
-    // if (type == 'error') {
-    //   let [error, message] = args;
-    //   if (message) {
-    //     console.log(message);
-    //   }
-    //   if (error) {
-    //     console.error(error);
-    //   }
-    //   if (this.server && !this.server.win.isDestroyed()) {
-    //     if (error && error.stack) {
-    //       error = error.stack;
-    //     }
-    //     this.server.sendRenderIpc('debuglog', {error, message});
-    //   }
-    // } else {
-    //   console.log(...args);
-    //   if (this.server && !this.server.win.isDestroyed()) {
-    //     this.server.sendRenderIpc('debuglog', {message: args[0]});
-    //   }
-    // }
+  private logToIpc(message: string) {
+      console.log(message);
+      if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {
+        this.ipc.browserClient.handleLog(message);
+      }
+  }
+
+  private logErrorToIpc(error: Error, message: string) {
+    if (message) {
+      console.log(message);
+    }
+    if (error) {
+      console.error(error);
+    }
+    if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {
+      if (error && error.stack) {
+        this.ipc.browserClient.handleLog(message, error.stack);
+      } else {
+        this.ipc.browserClient.handleLog(message);
+      }
+    }
   }
 }
 

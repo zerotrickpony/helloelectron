@@ -41,10 +41,20 @@ export class IpcHandler implements BrowserIpc {
   }
 
   // Called when the main process crashes.
-  async handleError(error: string): Promise<void> {
+  async handleFatalError(error: string): Promise<void> {
     const e = new Error(`Main worker crash: ${error}`);
     (e as any).pfmainError = error;
     new ErrorReport(this.mainClient, e);
+  }
+
+  // Called when the main process logs something that we want to show in the console.
+  handleLog(message: string, error: string): void {
+    if (message) {
+      console.log(message);
+    }
+    if (error) {
+      console.error(error);
+    }
   }
 }
 

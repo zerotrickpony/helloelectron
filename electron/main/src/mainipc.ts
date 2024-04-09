@@ -4,6 +4,7 @@ import {Main} from './electronmain';
 import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData} from './common/schema';
 import {fork} from './common/commonutil';
 import {readPackagePropertyFile, getHomeDir} from './util';
+import {Logger} from './logger';
 
 // TODO - import {SelfUpdater} from './selfupdater';
 
@@ -44,6 +45,7 @@ export class IpcHandler implements MainIpc {
   }
 
   async getPlatformInfo(): Promise<PlatformInfo> {
+    Logger.log(`getPlatformInfo`);
     if (!this.platformInfo) {
       const updateUrl = readPackagePropertyFile('updateinfo.txt');
 
@@ -111,8 +113,9 @@ export class IpcClient implements BrowserIpc {
 
   // Note that unlike the render IPC, the browser IPCs are blind fire so you don't get a response.
   // TODO - it would be nice to auto-generate these dispatchers since they're all the same.
-  handleQuitting(...args: any[]) {this.send('handleQuitting', args)}
-  handleError   (...args: any[]) {this.send('handleError',    args)}
+  handleQuitting  (...args: any[]) {this.send('handleQuitting',   args)}
+  handleFatalError(...args: any[]) {this.send('handleFatalError', args)}
+  handleLog       (...args: any[]) {this.send('handleLog',        args)}
 }
 
 import 'source-map-support/register';  // TODO - is there a better way to get source map support?
