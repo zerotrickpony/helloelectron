@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "outDir": "out/vscode",
+    "outDir": "../out/testtsc",
     "target": "es2015",
-    "module": "es2015",
-    "moduleResolution": "node",
+    "module": "node16",
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "removeComments": false,
@@ -13,10 +12,7 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "main/src/**/*.ts",
-    "web/src/**/*.ts",
-    "test/src/**/*.ts",
-    "test/websrc/**/*.ts",
-    "web/lib/js/**/*.js"
-  ],
+    "src/**/*.ts",
+    "../main/src/**/*.ts"
+  ]
 }

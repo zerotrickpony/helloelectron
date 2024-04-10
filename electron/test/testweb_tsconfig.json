@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "outDir": "out/vscode",
+    "outFile": "../out/build/web/compiled.js",
     "target": "es2015",
-    "module": "es2015",
-    "moduleResolution": "node",
+    "module": "amd",
+    "esModuleInterop": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "removeComments": false,
@@ -13,10 +13,10 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "main/src/**/*.ts",
-    "web/src/**/*.ts",
-    "test/src/**/*.ts",
-    "test/websrc/**/*.ts",
-    "web/lib/js/**/*.js"
-  ],
+    "websrc/**/*.ts",
+    "src/common/**/*.ts",
+    "../web/src/**/*.ts",
+    "../web/lib/js/**/*.js",
+    "../main/src/common/**/*.ts"
+  ]
 }

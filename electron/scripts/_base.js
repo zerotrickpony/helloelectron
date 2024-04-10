@@ -180,8 +180,13 @@ export function parsePackageJson() {
 
 // Erases all occurrences of "sourceMappingURL" from a text file.
 export function stripSourceMap(path) {
+  rewriteInPlace(path, /sourceMappingURL/g, '');
+}
+
+// Performs regexp substitution in place within the given file.
+export function rewriteInPlace(path, pattern, replacement) {
   const text = '' + fs.readFileSync(path);
-  fs.writeFileSync(path, text.replace(/sourceMappingURL/g, ''));
+  fs.writeFileSync(path, text.replace(pattern, replacement));
 }
 
 // Returns the trimmed contents of the given file if it exists, or '' otherwise.

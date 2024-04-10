@@ -5,8 +5,10 @@
 // for distribution, look at ./scripts/package.js instead.
 
 import fs from 'fs';
+import {dirname, basename} from 'path';
 import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readTextFileOr,
-        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap, getSHA256} from './_base.js';
+        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap, getSHA256,
+        rewriteInPlace} from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -25,13 +27,17 @@ const COMMANDS = new Map([
       buildIcons]],
   ['run', ['Builds and runs the Electron app in development mode',
       buildMain, buildWeb, buildCss, runDev]],
+  ['test', ['Builds the test harness and runs each test',
+      buildMain, buildWeb, buildCss, buildTest, runDev]],
   ['package', ['Packages a distributable Electron binary for the current platform',
       cleanOut, buildMain, buildWeb, buildCss, buildIcons, packageElectron]],
   ['help', ['Prints this help message',
-      printHelp]]
+      printHelp]],
+  ['explain', ['Prints the detailed steps that each command performs',
+      printExplain]]
 ]);
 
-const HELP = new Map([
+const EXPLAIN = new Map([
   [cleanOut, 'Erases all build and package output'],
   [cleanNpm, 'Erases all node_modules so they can be npm installed again'],
   [install, 'Performs NPM install on both main and render process sub-modules'],
@@ -41,7 +47,9 @@ const HELP = new Map([
   [runDev, 'Quickly launches the Electron app in development mode (pre-packaged)'],
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
-  [printHelp, 'Shows this help message']
+  [buildTest, 'Builds all typescript for main and test, including test code'],
+  [printHelp, 'Shows a brief description of each command'],
+  [printExplain, 'Shows this help message'],
 ]);
 
 function parseSteps() {
@@ -115,6 +123,9 @@ async function buildWeb() {
 
   // We depend on require.js for module loading in the render process.
   fs.cpSync(projectPath('web/lib/boot/require.js'), projectPath('out/build/web/require.js'));
+
+  // This will be mutated by the test script so we make a copy of it
+  fs.cpSync(projectPath('web/lib/boot/electronmain.html'), projectPath('out/build/web/electronmain.html'));
 }
 
 async function buildCss() {
@@ -277,6 +288,68 @@ async function stageWin32(packageInfo) {
   console.log('Host URL   : ' + updatehost);
 }
 
+// Builds the main process code with the testing harness installed
+async function buildTest() {
+  // Replace the compiled typescript with our versions
+  const test = projectPath('test');
+  const tsc = projectPath('main/node_modules/.bin/tsc');
+  await execScript(test, tsc, '--project', 'testmain_tsconfig.json');
+  await execScript(test, tsc, '--project', 'testweb_tsconfig.json');
+
+  // Find all the tests and register them
+  const webTestNames = [];
+  const mainTestNames = [];
+  const root = projectPath('test');
+  for (const tsFile of listDirR(projectPath('test/src'))) {
+    if (tsFile.endsWith('.ts') && basename(tsFile).startsWith('test_')) {
+      const name = 'test' + tsFile.substring(root.length, tsFile.length - 3);
+      mainTestNames.push(name);
+    }
+  }
+  for (const tsFile of listDirR(projectPath('test/websrc'))) {
+    if (tsFile.endsWith('.ts') && basename(tsFile).startsWith('test_')) {
+      const name = 'test' + tsFile.substring(root.length, tsFile.length - 3);
+      webTestNames.push(name);
+    }
+  }
+
+  // inject lib/electronmain.inject.html, as well as require statements for all the node-side tests
+  const htmlTemplateText = fs.readFileSync(projectPath('test/lib/electronmain.inject.html'));
+  rewriteInPlace(projectPath('out/build/web/electronmain.html'),
+      /<!--__TEST_DRIVER_INJECTION_POINT__-->/g,
+      `
+      <script>
+      require(${JSON.stringify(webTestNames)});
+      require(["test/websrc/webrunner"]);
+      </script>
+      ${htmlTemplateText}
+      `);
+
+  // inject lib/electronmain.inject.js into the Javascript, and include the Runner class
+  const jsTemplateText = fs.readFileSync(projectPath('test/lib/electronmain.inject.js'));
+  rewriteInPlace(projectPath('out/build/electronmain.js'),
+      /\/\/ __TEST_DRIVER_INJECTION_POINT__/g,
+      `
+      ${jsTemplateText}
+      require('./test/runner.js');
+      `);
+
+  // rewrite require() paths for the test code, and then move it into place
+  for (const jsFile of listDirR(projectPath('out/testtsc/test/src'))) {
+    if (jsFile.endsWith('.js')) {
+      // Example line: \nconst logger_1 = require("../../main/src/logger");\n
+      rewriteInPlace(jsFile, /(\nconst.*? = require\("\.\.)\/\.\.\/main\/src(.*"\);\n)/g, '$1$2');
+    } else if (jsFile.endsWith('.js.map')) {
+      // Example phrase: "sources":["../../../../test/src/test_start.ts"]
+      rewriteInPlace(jsFile, /"sources":\["..\/..\/..\/..\/test\/src\//g, '"sources":["../../../test/src/');
+    }
+  }
+  fs.renameSync(projectPath('out/testtsc/test/src'), projectPath('out/build/test'));
+
+  // Place a symlink to the test lib directory, so we don't have to copy it
+  symlinkSync(projectPath('test/lib'), projectPath('out/build/test/lib'));
+}
+
 function printHelp() {
   console.log(`
 Syntax: node ./scripts/builder.js <command>
@@ -284,5 +357,19 @@ Syntax: node ./scripts/builder.js <command>
 Where the command is one of:`);
   for (const [command, helpAndSteps] of COMMANDS) {
     console.log(`"${command}": ${helpAndSteps[0]}`);
+  }
+}
+
+function printExplain() {
+  console.log(`
+Syntax: node ./scripts/builder.js <command>
+
+Here are the commands in detail:`);
+  for (const [command, helpAndSteps] of COMMANDS) {
+    console.log(`${command}: ${helpAndSteps[0]}`);
+    for (const step of helpAndSteps.slice(1)) {
+      console.log(`  - ${EXPLAIN.get(step)}`);
+    }
+    console.log('');
   }
 }
