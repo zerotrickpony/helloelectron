@@ -17,7 +17,6 @@ type Request = Electron.ProtocolRequest;
 type Response = Electron.ProtocolResponse | string;
 type ProtocolFn = (rsp: Response) => void;
 
-let HTMLFILENAME = 'lib/electronmain.html';  // this is overridden for tests
 let SYSTEMTESTDATA = new TestData();  // this filled in for testing
 
 // __TEST_DRIVER_INJECTION_POINT__
@@ -76,7 +75,7 @@ export class Main {
 
     win.setBackgroundColor('#000');
     win.maximize();
-    win.loadFile(HTMLFILENAME);
+    win.loadFile('web/electronmain.html');
     return win;
   }
 

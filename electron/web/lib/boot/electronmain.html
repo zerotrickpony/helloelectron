@@ -18,17 +18,18 @@
     <title>Hello</title>
     <link rel="stylesheet" type="text/css" href="electronresource://web/compiled.css">
     <script src="electronresource://web/require.js"></script>
+    <script src="electronresource://web/compiled.js"></script>
+
     <script>
       requirejs.config({
-          baseUrl: 'electronresource://web',
           paths: {
-              'web/src/main': 'compiled',
-              'jquery': 'lib/js/jquery-1.10.2',
-              'jquery-hashchange': 'lib/js/jquery-hashchange'
+              'jquery': 'electronresource://web/lib/js/jquery-1.10.2',
+              'jquery-hashchange': 'electronresource://web/lib/js/jquery-hashchange'
           }
       });
-      requirejs(['web/src/main']);
+      require(['web/src/main']);
     </script>
+
     <!--__TEST_DRIVER_INJECTION_POINT__-->
   </head>
   <body>
