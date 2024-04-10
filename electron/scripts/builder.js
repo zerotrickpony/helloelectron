@@ -297,21 +297,8 @@ async function buildTest() {
   await execScript(test, tsc, '--project', 'testweb_tsconfig.json');
 
   // Find all the tests and register them
-  const webTestNames = [];
-  const mainTestNames = [];
-  const root = projectPath('test');
-  for (const tsFile of listDirR(projectPath('test/src'))) {
-    if (tsFile.endsWith('.ts') && basename(tsFile).startsWith('test_')) {
-      const name = 'test' + tsFile.substring(root.length, tsFile.length - 3);
-      mainTestNames.push(name);
-    }
-  }
-  for (const tsFile of listDirR(projectPath('test/websrc'))) {
-    if (tsFile.endsWith('.ts') && basename(tsFile).startsWith('test_')) {
-      const name = 'test' + tsFile.substring(root.length, tsFile.length - 3);
-      webTestNames.push(name);
-    }
-  }
+  const webTestNames = findTestNames_('test/websrc').map(f => `test/websrc/${f}`);
+  const mainTestRequires = findTestNames_('test/src').map(t => `    require('./test/${t}.js');`).join('\n');
 
   // inject lib/electronmain.inject.html, as well as require statements for all the node-side tests
   const htmlTemplateText = fs.readFileSync(projectPath('test/lib/electronmain.inject.html'));
@@ -331,10 +318,11 @@ async function buildTest() {
       /\/\/ __TEST_DRIVER_INJECTION_POINT__/g,
       `
       ${jsTemplateText}
+      ${mainTestRequires}
       require('./test/runner.js');
       `);
 
-  // rewrite require() paths for the test code, and then move it into place
+  // rewrite require() paths for the test code so that we can reparent it into the app
   for (const jsFile of listDirR(projectPath('out/testtsc/test/src'))) {
     if (jsFile.endsWith('.js')) {
       // Example line: \nconst logger_1 = require("../../main/src/logger");\n
@@ -344,10 +332,25 @@ async function buildTest() {
       rewriteInPlace(jsFile, /"sources":\["..\/..\/..\/..\/test\/src\//g, '"sources":["../../../test/src/');
     }
   }
+
+  // place the test code within the built app
   fs.renameSync(projectPath('out/testtsc/test/src'), projectPath('out/build/test'));
 
   // Place a symlink to the test lib directory, so we don't have to copy it
   symlinkSync(projectPath('test/lib'), projectPath('out/build/test/lib'));
+}
+
+// Returns the list of test_blah names within the given directory.
+function findTestNames_(ppath) {
+  const result = [];
+  const root = projectPath(ppath);
+  for (const tsFile of listDirR(root)) {
+    const bname = basename(tsFile);
+    if (tsFile.endsWith('.ts') && bname.startsWith('test_')) {
+      result.push(bname.substring(0, bname.length - 3));
+    }
+  }
+  return result;
 }
 
 function printHelp() {

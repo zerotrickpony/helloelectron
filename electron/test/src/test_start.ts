@@ -8,4 +8,6 @@ class TestStart extends BaseElectronTest {
   }
 }
 
+console.log(`main process TestStart has been loaded`);
+
 new TestStart();
