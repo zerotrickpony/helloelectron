@@ -53,19 +53,33 @@ const EXPLAIN = new Map([
   [printExplain, 'Shows this help message'],
 ]);
 
-function parseSteps() {
-  const text = process.argv[process.argv.length - 1];
-  const commands = COMMANDS.get(text.toLowerCase());
+// Returns the command and any arguments after it, as an array.
+function parseArgs() {
+  let idx = 0;
+  for (idx = 0; idx < process.argv.length; idx++) {
+    if (process.argv[idx].endsWith('builder.js')) {
+      break;
+    }
+  }
+  if (idx >= process.argv.length - 1) {
+    // No command argument specified
+    return {args: [], steps: COMMANDS.get('build').slice(1)};
+  }
+
+  const command = process.argv[idx + 1];
+  const args = [...process.argv.slice(idx + 2)];
+  const commands = COMMANDS.get(command.toLowerCase());
   if (!commands) {
-    return COMMANDS.get('build').slice(1);
+    return {args: [], steps: COMMANDS.get('help').slice(1)};
   } else {
-    return commands.slice(1);
+    return {args, steps: commands.slice(1)};
   }
 }
 
 await runSteps(async x => {
-  for (const step of parseSteps()) {
-    await step();
+  const {args, steps} = parseArgs();
+  for (const step of steps) {
+    await step(...args);
   }
 });
 
@@ -347,7 +361,7 @@ async function buildTest() {
 }
 
 // Returns the list of test_blah names within the given directory.
-function findTestNames_(ppath) {
+function findTestNames_(ppath, opt_specificTest) {
   const result = [];
   const root = projectPath(ppath);
   for (const tsFile of listDirR(root)) {
@@ -356,24 +370,41 @@ function findTestNames_(ppath) {
       result.push(bname.substring(0, bname.length - 3));
     }
   }
+  if (opt_specificTest) {
+    if (result.indexOf(opt_specificTest) != -1) {
+      return [opt_specificTest];
+    }
+    return [];  // we didnt have this test, nothing
+  }
   return result;
 }
 
 // Runs all the tests.
-async function runTests() {
+async function runTests(opt_specificTest) {
   // Find all the tests to run
-  const webTestNames = findTestNames_('test/websrc');
-  const mainTestNames = findTestNames_('test/src');
+  const webTestNames = findTestNames_('test/websrc', opt_specificTest);
+  const mainTestNames = findTestNames_('test/src', opt_specificTest);
 
+  let n = 0;
   for (const test of mainTestNames) {
     await runTest_(test, false);
+    n++;
   }
 
   for (const test of webTestNames) {
     await runTest_(test, true);
+    n++;
   }
 
-  console.log(`ALL TESTS PASSED`);
+  if (n == 0 && opt_specificTest) {
+    console.log(`Error: Test not found: ${opt_specificTest}`);
+    process.exit(1);
+  } else if (n == 0) {
+    console.log(`Error: No tests found`);
+    process.exit(1);
+  } else if (n > 1) {
+    console.log(`ALL TESTS PASSED (${n})`);
+  }
   process.exit(0);
 }
 
