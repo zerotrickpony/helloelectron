@@ -10,7 +10,7 @@ export class Logger {
       Logger.GLOBAL_ERROR_HANDLER(e, opt_message);
     } else {
       if (opt_message) {
-        console.log(opt_message);
+        console.error(opt_message);
       }
       console.error(e);
     }

@@ -7,6 +7,7 @@ type IpcFn = (command: string, args: string[]) => Promise<void>;
 
 contextBridge.exposeInMainWorld('electronAPI',{
   command: async (req: Electron.ProtocolRequest) => await ipcRenderer.invoke('command', req),
+  testcommand: async (req: Electron.ProtocolRequest) => await ipcRenderer.invoke('testcommand', req),  // only implemented by the test runner
   clearWebFrameCache: () => webFrame.clearCache(),
   handleIpc: (listenerFn: IpcFn) => {
     ipcRenderer.on('asynchronous-message', async (e, payload) => await listenerFn(payload.command, payload.args));

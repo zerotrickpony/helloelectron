@@ -17,7 +17,7 @@ type Request = Electron.ProtocolRequest;
 type Response = Electron.ProtocolResponse | string;
 type ProtocolFn = (rsp: Response) => void;
 
-let SYSTEMTESTDATA = new TestData();  // this filled in for testing
+export const SYSTEMTESTDATA = new TestData();  // this filled in for testing
 
 // __TEST_DRIVER_INJECTION_POINT__
 
@@ -27,10 +27,17 @@ app.whenReady().then(() => new Main());
 
 // The main electron app.
 export class Main {
+  static INSTANCE: Main;
+
   win: BrowserWindow;
   ipc: IpcHandler;
 
   constructor() {
+    if (Main.INSTANCE) {
+      throw new Error(`Duplicate instance constructed`);
+    }
+    Main.INSTANCE = this;
+
     // Register protocols and app hooks
     protocol.registerFileProtocol('electronresource', (req, fn) => this.serveResource(req, fn));
     ipcMain.handle('command', async (e, req) => await this.ipc.handleMainIpc(req));
@@ -82,7 +89,7 @@ export class Main {
   private logToIpc(message: string) {
       console.log(message);
       if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {
-        this.ipc.browserClient.handleLog(message);
+        this.ipc.browserClient.handleLog(message, undefined);
       }
   }
 
@@ -97,7 +104,7 @@ export class Main {
       if (error && error.stack) {
         this.ipc.browserClient.handleLog(message, error.stack);
       } else {
-        this.ipc.browserClient.handleLog(message);
+        this.ipc.browserClient.handleLog(message, undefined);
       }
     }
   }

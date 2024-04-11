@@ -6,15 +6,18 @@ export const ALL_TESTS = new Map<string, BaseElectronTest>();
 // Base class for all runnable tests. These register themselves on creation and
 // then are run by the testing harness.
 export abstract class BaseElectronTest {
-  name: string;
+  moduleName: string;
+  testName: string;
 
-  constructor() {
-    this.name = this.constructor.name;
-    if (ALL_TESTS.get(this.name)) {
-      throw new Error(`Duplicate test name "${this.name}" detected; please give every test a unique name.`);
+  // Pass the basename of your test module, like "test_example" here.
+  constructor(moduleName: string) {
+    this.moduleName = moduleName;
+    this.testName = this.constructor.name;
+    if (ALL_TESTS.get(this.moduleName)) {
+      throw new Error(`Duplicate test "${this.moduleName}" detected; please put each test in its own file.`);
     }
-    ALL_TESTS.set(this.name, this);
-    console.log(`Registered test: ${this.name}`);
+    ALL_TESTS.set(this.moduleName, this);
+    console.log(`Registered test: ${this.moduleName}`);
   }
 
   // Runs the test. Any exception thrown is a failure, otherwise the test passes.

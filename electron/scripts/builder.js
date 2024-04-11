@@ -28,7 +28,7 @@ const COMMANDS = new Map([
   ['run', ['Builds and runs the Electron app in development mode',
       buildMain, buildWeb, buildCss, runDev]],
   ['test', ['Builds the test harness and runs each test',
-      buildMain, buildWeb, buildCss, buildTest, runDev]],
+      buildMain, buildWeb, buildCss, buildTest, runTests]],
   ['package', ['Packages a distributable Electron binary for the current platform',
       cleanOut, buildMain, buildWeb, buildCss, buildIcons, packageElectron]],
   ['help', ['Prints this help message',
@@ -48,6 +48,7 @@ const EXPLAIN = new Map([
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
   [buildTest, 'Builds all typescript for main and test, including test code'],
+  [runTests, 'Runs every test_blah.ts file and stops if any of them fail'],
   [printHelp, 'Shows a brief description of each command'],
   [printExplain, 'Shows this help message'],
 ]);
@@ -334,6 +335,7 @@ async function buildTest() {
   }
 
   // place the test code within the built app
+  fs.rmSync(projectPath('out/build/test'), {recursive: true, force: true});
   fs.renameSync(projectPath('out/testtsc/test/src'), projectPath('out/build/test'));
 
   // Place a symlink to the test lib directory, so we don't have to copy it
@@ -351,6 +353,53 @@ function findTestNames_(ppath) {
     }
   }
   return result;
+}
+
+// Runs all the tests.
+async function runTests() {
+  // Find all the tests to run
+  const webTestNames = findTestNames_('test/websrc');
+  const mainTestNames = findTestNames_('test/src');
+
+  for (const test of mainTestNames) {
+    await runTest_(test, false);
+  }
+
+  for (const test of webTestNames) {
+    await runTest_(test, true);
+  }
+
+  console.log(`ALL TESTS PASSED`);
+  process.exit(0);
+}
+
+// Runs one test by writing out testrunnerinfo.json and launching.
+async function runTest_(testName, isWeb) {
+  // Clear any prior result
+  const resultPath = projectPath('out/build/testresult.json');
+  fs.rmSync(resultPath, {force: true});
+
+  // Leave a note for the runner saying what test to run
+  const info = {testName, isWeb};
+  fs.writeFileSync(projectPath('out/build/testrunnerinfo.json'), JSON.stringify(info));
+
+  // Launch; if this doesn't exit with zero status then we'll fail it
+  const p = projectPath('out/build');
+  const electron = projectPath('out/build/node_modules/.bin/electron');
+  await execScript(p, electron, '.');
+
+  // The runner should have left us a result file to confirm success
+  const prefix = isWeb ? 'test/websrc/...' : 'test/src/...';
+  const result = JSON.parse(fs.readFileSync(resultPath).toString());
+  if (result && result.result === 'success') {
+    if (result.testName != testName) {
+      throw new Error(`Surprising mismatch between result file and intended test: ${result.testName} != ${testName}`);
+    }
+    console.log(`PASSED: ${prefix}/${testName}.ts`);
+  } else {
+    console.log(`FAILED: ${prefix}/${testName}.ts`);
+    process.exit(1);
+  }
 }
 
 function printHelp() {

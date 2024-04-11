@@ -1,11 +1,11 @@
 import {BaseElectronTest} from '../src/common/commontesting';
 import {HtmlBuilder} from '../../web/src/util/html';
 
-class TestWebStart extends BaseElectronTest {
+class TestWebExample extends BaseElectronTest {
   async run(): Promise<void> {
     HtmlBuilder.onBody().add('<div style="border: 1px solid red;" />').text('Hello!');
-    throw new Error('This test fails');
+    // throw new Error('This test fails');
   }
 }
 
-new TestWebStart();
+new TestWebExample('test_webexample');

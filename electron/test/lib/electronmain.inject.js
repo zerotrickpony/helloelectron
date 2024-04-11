@@ -4,4 +4,4 @@
 
 // Please note this is JS not TS, sorry about that.
 
-SYSTEMTESTDATA.exampleTestValue = true;
+exports.SYSTEMTESTDATA.exampleTestValue = true;

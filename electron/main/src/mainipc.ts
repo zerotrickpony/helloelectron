@@ -12,7 +12,7 @@ import {Logger} from './logger';
 export class IpcHandler implements MainIpc {
   win: BrowserWindow;
   systemTestData = new TestData();
-  browserClient: IpcClient;
+  browserClient: BrowserIpc;
   platformInfo?: PlatformInfo;  // set on first use
 
   constructor(main: Main, opt_systemTestData?: TestData) {
@@ -72,11 +72,11 @@ export class IpcHandler implements MainIpc {
     }
   }
 
-  async quit(relaunch: boolean): Promise<void> {
+  async quit(relaunch: boolean = false, exitCode = 0): Promise<void> {
     if (relaunch) {
       // TODO - this.updater.relaunch();
     } else {
-      app.exit();
+      app.exit(exitCode);
     }
   }
 
@@ -94,7 +94,7 @@ export class IpcHandler implements MainIpc {
   }
 
   async setTestData(property: keyof TestData, value: any): Promise<void> {
-    this.systemTestData[property] = value;
+    (this.systemTestData as any)[property] = value;
   }
 }
 

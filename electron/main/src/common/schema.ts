@@ -5,7 +5,7 @@ export type AFN = Promise<any>;
 // The interface from the render process down to the main process.
 export interface MainIpc {
   getPlatformInfo(): Promise<PlatformInfo>;
-  quit(relaunch: boolean): AFN;
+  quit(relaunch: boolean, exitCode: number): AFN;
   getTestData(): Promise<TestData>;
   setTestData(key: keyof TestData, value: any): AFN;
 
@@ -35,7 +35,9 @@ export interface PlatformInfo {
   cwd: string;  // the CWD of the current process
 }
 
+// During tests, this informs the WebRunner of which test to run. Can attach other details here too.
 export class TestData {
-  testName?: string;  // the currently running test, if any
+  testName?: string;  // The current web test name to launch, if any
+  isWeb = false;  // True if the current test to run is in the renderer process
   fakeArgv = new Map<string, string[]>;  // a per-test map of fake args to install
 }
