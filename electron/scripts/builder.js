@@ -340,6 +340,10 @@ async function buildTest() {
 
   // Place a symlink to the test lib directory, so we don't have to copy it
   symlinkSync(projectPath('test/lib'), projectPath('out/build/test/lib'));
+
+  // Forward the typescript source
+  fs.mkdirSync(projectPath('out/build/web/test'), {recursive: true});
+  symlinkSync(projectPath('test/websrc'), projectPath('out/build/web/test/websrc'));
 }
 
 // Returns the list of test_blah names within the given directory.
