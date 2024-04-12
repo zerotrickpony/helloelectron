@@ -60,6 +60,9 @@ export class TestRunner {
 
   // Called by the web runner (or maybe some other test utility code?)
   private async handleTestIpc(req: {command: string, args: any[]}): Promise<IpcResult> {
+    if (req.command !== 'success') {
+      Main.INSTANCE.win.webContents.openDevTools();
+    }
     if (req.command === 'failure' || req.command === 'success') {
       // Write out the status for the currently running test
       const testName = this.testData.testName;
