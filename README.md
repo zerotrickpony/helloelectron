@@ -13,26 +13,26 @@ Electron is a framework for making **native apps** on Windows, MacOS, and Linux.
   costs.
 - You need to do something with the native OS that's not possible in a web browser.
 - You don't need to deliver a mobile app.
-- The UX you want to show could be expressed as a web page (This is true for most apps, because
-  web pages are ludicrously capable.)
-- You don't need cross platform development, but you also don't really know native Windows /
-  native Mac programming but you do know web development.
+- The UX you want to show could be expressed as HTML+CSS+JS (This is true for most apps, because
+  web pages are ludicrously capable, including WebGL etc, which Electron can do.)
+- You need to deliver a native app on just one platform, and you really don't want to learn native
+  Windows / native Mac programming (and you do already know web development.)
 
 Consider **not** using Electron if:
 
 - You want to deliver only mobile apps. Consider Fluttr or Instant apps.
 - You want to deliver game-like 3D graphics. Consider Unity.
-- You want a "write once" app that deploys to iOS, Android. Consider Unity.
+- You want a "write once" app that deploys to MacOS, iOS, Android, Windows, etc. Consider Unity.
 - You don't really need any native-only facilities, such as opening a server socket or accessing
   the user's local disk carte blanche. If you just need a GUI, consider delivering as a web page,
-  it will be less work.
+  it will be less work and your users will be able to access it more easily.
 - You want to deliver a UX that's tightly integrated with a more exotic part of the native OS,
   such as a system tray icon, a dashboard widget, an accessibility plugin, or a control panel
-  element. Electron doesn't abstract these things so well.
+  element. Electron doesn't abstract these things so well, so you may need to write native code.
 - Your application requires a cloud service that you are going to maintain. Electron can still
   participate in that architecture as a native client, but if it's not going to help you avoid
-  building out a cloud service, then you might seriously consider whether you can serve a web
-  GUI off your cloud service and avoid the native client.
+  building out a cloud service, then you might consider whether you can serve a web GUI off your
+  cloud service and avoid the native client.
 - You want to deliver a very polished native experience on Windows or Mac. Consider building
   out two separate native apps.
 - You don't know HTML/CSS nor node.js and don't want to learn
@@ -57,13 +57,24 @@ Electron. So if you're working with the network, filesystem, or processes, expec
 anything different in Electron than what you'd have in node. This means that (for example) you'll
 be subject to the usual leaky abstractions from node.js, such as file paths on Windows, etc.
 
+On dependencies: Although you can enjoy the benefits of NPM packages in your app, beware that NPM
+packages aren't always cross-platform. I have been burned multiple times by useful-looking NPM
+packages that pull in native dependencies under the hood which refuse to compile on one of my target
+platforms, or which choke on node.js leaky abstractions such as Windows path drive letters. My
+advice is to limit the NPM packages you install, budget for cross-platform testing when you are
+vetting a new dependency, and be prepared for several false starts (e.g. removing a dependency and
+then trying an alternative) when you need a library. In several cases in my own projects I ended
+up avoiding NPM entirely; it was easier to choose a native binary, manually build that binary on 3
+platforms, store the binaries for each platform in git, and then spawning the binaries as separate
+processes from my Electron app. Gross but reliable.
+
 There are also a number of parts of Electron that do not abstract multiple OS's at all. You'll find
 things like app updates, installers, and a few other things are just OS-specific implementations
 that you have to manually call by writing `if (process.platform === 'win32') {` type statements
 for. In this regard I feel that Electron is still helpful, but not really complete. Perhaps
 these things will improve in the future.
 
-Building and packaging is particularly one of those aspects; there's no single builder and there's
+Building and packaging in particular is one of those aspects; there's no single builder and there's
 no crossbuild tools for Electron, you just have to debug each platform. I've done some of that
 for you, see below.
 
