@@ -312,8 +312,13 @@ async function buildTest() {
   await execScript(test, tsc, '--project', 'testweb_tsconfig.json');
 
   // Find all the tests and register them
-  const webTestNames = findTestNames_('test/websrc').map(f => `test/websrc/${f}`);
-  const mainTestRequires = findTestNames_('test/src').map(t => `    require('./test/${t}.js');`).join('\n');
+  const webTests = findTestNames_('test/websrc');
+  const mainTests = findTestNames_('test/src');
+  const webTestPaths = webTests.map(f => `test/websrc/${f}`);
+  const mainTestRequires = mainTests.map(t => `    require('./test/${t}.js');`).join('\n');
+
+  // Complain if the tests don't all have unique names
+  checkUnique_([...webTests, ...mainTests]);
 
   // inject lib/electronmain.inject.html, as well as require statements for all the node-side tests
   const htmlTemplateText = fs.readFileSync(projectPath('test/lib/electronmain.inject.html'));
@@ -321,7 +326,7 @@ async function buildTest() {
       /<!--__TEST_DRIVER_INJECTION_POINT__-->/g,
       `
       <script>
-      require(${JSON.stringify(webTestNames)});
+      require(${JSON.stringify(webTestPaths)});
       require(["test/websrc/webrunner"]);
       </script>
       ${htmlTemplateText}
@@ -358,6 +363,17 @@ async function buildTest() {
   // Forward the typescript source
   fs.mkdirSync(projectPath('out/build/web/test'), {recursive: true});
   symlinkSync(projectPath('test/websrc'), projectPath('out/build/web/test/websrc'));
+}
+
+function checkUnique_(testNames) {
+  const seen = new Set();
+  for (const name of testNames) {
+    if (seen.has(name)) {
+      console.error(`ERROR: Multiple tests with the name "${name}", please use unique test names`);
+      process.exit(1);
+    }
+    seen.add(name);
+  }
 }
 
 // Returns the list of test_blah names within the given directory.
