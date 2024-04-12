@@ -1,21 +1,21 @@
 // Utility for building and manipulating the browser DOM concisely.
 
-export class HtmlBuilder {
+export class DomBox {
   cursor: HTMLElement;
 
   // Starts a new HTML cursor that adds items to the given parent.
-  static at(cursor: HTMLElement): HtmlBuilder {
-    return new HtmlBuilder(cursor);
+  static at(cursor: HTMLElement): DomBox {
+    return new DomBox(cursor);
   }
 
   // Starts a new HTML cursor that adds items to the document body.
-  static onBody(): HtmlBuilder {
-    return new HtmlBuilder(HtmlBuilder.findBody());
+  static onBody(): DomBox {
+    return new DomBox(DomBox.findBody());
   }
 
   // Starts a new HTML cursor that adds items to the existing element with the given ID.
-  static onId(id: string): HtmlBuilder {
-    return new HtmlBuilder(HtmlBuilder.findId(id));
+  static onId(id: string): DomBox {
+    return new DomBox(DomBox.findId(id));
   }
 
   // Modifies the given node using this builder wrapper.
@@ -24,9 +24,9 @@ export class HtmlBuilder {
   }
 
   // Creates a child node at the cursor element and returns a new cursor for it.
-  add(spec: string): HtmlBuilder {
+  add(spec: string): DomBox {
     const node = this.addBelow(spec);
-    return new HtmlBuilder(node);
+    return new DomBox(node);
   }
 
   // Same as above, but doesn't create a new builder for the newly created child node.
@@ -43,25 +43,25 @@ export class HtmlBuilder {
   }
 
   // Sets the innerText of the element at the cursor.
-  text(text: string): HtmlBuilder {
+  text(text: string): DomBox {
     this.cursor.innerText = text;
     return this;
   }
 
   // Sets the innerHTML of the element at the cursor.
-  html(html: string): HtmlBuilder {
+  html(html: string): DomBox {
     this.cursor.innerHTML = html;
     return this;
   }
 
   // Installs a click handler, replacing other click handlers.
-  click(fn: (e: MouseEvent) => Promise<any>): HtmlBuilder {
+  click(fn: (e: MouseEvent) => Promise<any>): DomBox {
     this.cursor.onclick = fn;
     return this;
   }
 
   // Adds an event listener for the given event type.
-  on(eventType: string, fn: (e: Event) => Promise<any>): HtmlBuilder {
+  on(eventType: string, fn: (e: Event) => Promise<any>): DomBox {
     this.cursor.addEventListener(eventType, fn);
     return this;
   }
@@ -73,7 +73,7 @@ export class HtmlBuilder {
   }
 
   // Shows an element that was previously hidden with hide()
-  show(showCondition = true): HtmlBuilder {
+  show(showCondition = true): DomBox {
     if (showCondition) {
       this.cursor.classList.remove('hidden-element');
     } else {
@@ -83,7 +83,7 @@ export class HtmlBuilder {
   }
 
   // Styles the element away using the CSS class "hidden-element"
-  hide(): HtmlBuilder {
+  hide(): DomBox {
     this.cursor.classList.add('hidden-element');
     return this;
   }
@@ -94,10 +94,10 @@ export class HtmlBuilder {
   }
 
   // Returns a new cursor at the parent node.
-  up(): HtmlBuilder {
+  up(): DomBox {
     const parent = this.cursor.parentElement;
     if (parent) {
-      return new HtmlBuilder(parent);
+      return new DomBox(parent);
     } else {
       throw new Error(`No parent at this node: ${this.cursor}`);
     }

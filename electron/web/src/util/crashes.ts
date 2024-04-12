@@ -1,4 +1,4 @@
-import {HtmlBuilder} from './html';
+import {DomBox} from './html';
 import {IpcClient} from '../browseripc';
 
 // A minimal GUI for apologizing to the user for a fatal error
@@ -18,8 +18,8 @@ export class ErrorReport {
 
   // Dialog members
   ipc: IpcClient;
-  overlay: HtmlBuilder;
-  errorbox: HtmlBuilder;
+  overlay: DomBox;
+  errorbox: DomBox;
 
   // Displays the error report for an exception, or adds this exception to the existing report.
   constructor(ipc: IpcClient, e: Error) {
@@ -39,7 +39,7 @@ export class ErrorReport {
     }
 
     const what = ErrorReport.lifetimeCrashCount > 1 ? 'another' : 'an';
-    this.overlay = HtmlBuilder.onBody().add('<div id=erroroverlay />');
+    this.overlay = DomBox.onBody().add('<div id=erroroverlay />');
     const div = this.overlay.add('<div class="dialog errorreport" />');
     const title = div.add('<div class=title />').text('You found a bug!');
     div.add('<div class=subtitle />').
