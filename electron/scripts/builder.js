@@ -7,7 +7,7 @@
 import fs from 'fs';
 import {dirname, basename} from 'path';
 import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readTextFileOr,
-        execScriptAndGetResult, rmProjectFile, parsePackageJson, stripSourceMap, getSHA256,
+        execScriptAndGetResult, rmProjectFile, parseJson, stripSourceMap, getSHA256,
         rewriteInPlace} from './_base.js';
 
 const COMMANDS = new Map([
@@ -213,7 +213,7 @@ async function packageElectron() {
   }
 
   // Parse project metadata from package.json
-  const packageInfo = parsePackageJson();
+  const packageInfo = parseJson(projectPath('main/package.json'), true);
   const {name, version, updatehost} = packageInfo;
   const {arch, platform} = process;
   const updateUrl = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`
@@ -401,14 +401,16 @@ async function runTests(opt_specificTest) {
   const webTestNames = findTestNames_('test/websrc', opt_specificTest);
   const mainTestNames = findTestNames_('test/src', opt_specificTest);
 
+  const testConfig = parseJson(projectPath('test/testconfig.json'), false);
+
   let n = 0;
   for (const test of mainTestNames) {
-    await runTest_(test, false);
+    await runTest_(test, false, testConfig);
     n++;
   }
 
   for (const test of webTestNames) {
-    await runTest_(test, true);
+    await runTest_(test, true, testConfig);
     n++;
   }
 
@@ -425,19 +427,25 @@ async function runTests(opt_specificTest) {
 }
 
 // Runs one test by writing out testrunnerinfo.json and launching.
-async function runTest_(testName, isWeb) {
-  // Clear any prior result
+async function runTest_(testName, isWeb, testConfig) {
+  // Clear any prior result and prior data directory
   const resultPath = projectPath('out/build/testresult.json');
   fs.rmSync(resultPath, {force: true});
+  fs.rmSync(projectPath('out/build/test/data'), {recursive: true, force: true});
 
   // Leave a note for the runner saying what test to run
   const info = {testName, isWeb};
   fs.writeFileSync(projectPath('out/build/testrunnerinfo.json'), JSON.stringify(info));
 
+  const {wantTestData, argv} = parseTestConfig_(testConfig, testName);
+  if (wantTestData) {
+    fs.cpSync(projectPath('test/data'), projectPath('out/build/test/data'), {recursive: true});
+  }
+
   // Launch; if this doesn't exit with zero status then we'll fail it
   const p = projectPath('out/build');
   const electron = projectPath('out/build/node_modules/.bin/electron');
-  await execScript(p, electron, '.');
+  await execScript(p, electron, '.', ...argv);
 
   // The runner should have left us a result file to confirm success
   const prefix = isWeb ? 'test/websrc/...' : 'test/src/...';
@@ -451,6 +459,35 @@ async function runTest_(testName, isWeb) {
     console.log(`FAILED: ${prefix}/${testName}.ts`);
     process.exit(1);
   }
+}
+
+// Returns {wantTestData, argv} for the test with the given name
+function parseTestConfig_(testConfig, testName) {
+  let wantTestData = false;
+  let argv = [];
+  const matchesRule = (rule) => {
+    if (rule.test && rule.test === testName) {
+      return true;
+    }
+    if (rule.tests && new RegExp(`^${rule.tests}$`).test(testName)) {
+      return true;
+    }
+  };
+  for (const rule of testConfig) {
+    if (matchesRule(rule)) {
+      if (rule.testdata !== undefined) {
+        wantTestData = !!rule.testdata;
+      }
+      if (rule.argv) {
+        argv = rule.argv;
+      }
+      if (rule.argv && !Array.isArray(argv)) {
+        console.error(`Bad argv parameter in testconfig.json: ${argv}`);
+        throw new Error('STOP_BUILD');
+      }
+    }
+  }
+  return {wantTestData, argv};
 }
 
 function printHelp() {

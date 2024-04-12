@@ -167,13 +167,24 @@ export function rmProjectFile(p) {
   }
 }
 
-// Fails if package.json can't be parsed
-export function parsePackageJson() {
-  const path = projectPath('main/package.json');
+// Returns the contents of the given file as JSON, or null if not found. Still throws on parse error.
+export function parseJson(filename, opt_fail) {
+  let data;
   try {
-    return JSON.parse(fs.readFileSync(path));
+    data = fs.readFileSync(filename);
   } catch (e) {
-    console.error(`Could not parse ${path}`);
+    if (opt_fail) {
+      console.error(`JSON file not found: ${filename}`);
+      throw new Error('STOP_BUILD');
+    } else {
+      return null;  // no such file, but thats ok
+    }
+  }
+
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    console.error(`Could not parse ${filename}`);
     throw new Error('STOP_BUILD');
   }
 }

@@ -148,6 +148,8 @@ example as a library, or make it easy to take new versions of this example in th
    the render process.)
 2. Create a class in that file which extends BaseElectronTest
 3. Add the line "new YourTest();" at the bottom of that file
+4. (Optional) if your test needs a clean copy of test/data, or if it needs custom argv, you can
+   configure that in `test/testconfig.json`.
 4. Note that the tests run immediately, but you may want to wait for your app finish its own
    notion of startup / setup / readiness before your test runs. One way to do this is to start
    the test with a `"await waitFor(someGuiElementToAppear)"` type statement.
@@ -255,7 +257,8 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/test/src : Typescript test source code which runs in the main process.
 - /electron/test/websrc : Typescript test source code which runs in the render process.
 - /electron/test/lib : Resources which will be added to the Electron bundle in test/lib.
-- /electron/test/data : Data that's available to each test. This is cloned on each test run
+- /electron/test/data : Data that's made available to each test and reset, see testconfig.json:testdata
+- /electron/test/testconfig.json : Defines per-test setup behavior like custom argvs
 
 #### Generated outputs
 
@@ -480,10 +483,10 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   - ✅ bring in test/websrc source for debugger
   - ✅ run just one test, pick from the command line
   - ✅ open dev console on test failure
-  - testdata redeployments
+  - ✅ test/data redeployments
+  - ✅ just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
 - updater scheme / OTA update support
 - im not sure that source maps are working in node
-- just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
 - try npm install non-dev web dependencies, what happens to them?
 - add wrapper scripts for "npm install --save"
 - test packaging: Linux

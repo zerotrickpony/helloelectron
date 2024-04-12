@@ -1,0 +1,10 @@
+[
+  {
+    "tests": "test_.*",
+    "testdata": true
+  },
+  {
+    "test": "test_webexample",
+    "argv": ["--myflag"]
+  }
+]
