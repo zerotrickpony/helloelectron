@@ -31,7 +31,7 @@ export interface PlatformInfo {
   platform: string;
   updateUrl: string;
   homedir: string;  // path of the user's home directory
-  argv: string[];  // the process argv, possibly overriden for testing
+  argv: string[];  // the process argv
   cwd: string;  // the CWD of the current process
 }
 
@@ -39,5 +39,4 @@ export interface PlatformInfo {
 export class TestData {
   testName?: string;  // The current web test name to launch, if any
   isWeb = false;  // True if the current test to run is in the renderer process
-  fakeArgv = new Map<string, string[]>;  // a per-test map of fake args to install
 }

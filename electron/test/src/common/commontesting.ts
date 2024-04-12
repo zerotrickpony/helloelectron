@@ -17,7 +17,6 @@ export abstract class BaseElectronTest {
       throw new Error(`Duplicate test "${this.moduleName}" detected; please put each test in its own file.`);
     }
     ALL_TESTS.set(this.moduleName, this);
-    console.log(`Registered test: ${this.moduleName}`);
   }
 
   // Runs the test. Any exception thrown is a failure, otherwise the test passes.

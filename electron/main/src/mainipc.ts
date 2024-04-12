@@ -54,22 +54,11 @@ export class IpcHandler implements MainIpc {
         updateUrl: updateUrl ?? '',
         platform: process.platform,
         homedir: getHomeDir(),
-        argv: this.getArgv(),
+        argv: process.argv,
         cwd: process.cwd()
       }
     }
     return this.platformInfo;
-  }
-
-  private getArgv(): string[] {
-    const s = this.systemTestData;
-    const fakeArgv = s.fakeArgv.get(s.testName ? s.testName : '');
-    if (fakeArgv) {
-      // We're currently running a test that wants fake command line parameters
-      return fakeArgv;
-    } else {
-      return process.argv;
-    }
   }
 
   async quit(relaunch: boolean = false, exitCode = 0): Promise<void> {
