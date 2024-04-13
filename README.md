@@ -1,8 +1,17 @@
-# Electron project template
+# Helloelectron: An Electron project template
 
-## Overview
+# Overview
 
-#### Should I use Electron?
+## Why this example Electron app
+
+Electron, Typescript, NPM, Node.js, Electron-Forge, Squirrel, and other tools are very useful,
+but are also full of rough edges and bad opinions. This project demonstrates a file structure
+and build scripts that smoosh these tools together into a usable, capable project. In most
+cases the many inter-operation problems are papered over using codegens and/or build scripts.
+Although not ideal, this is often the only way to get these tools to work. The resulting
+arrangemnt is fragile, but I hope it gives you a useful starting point.
+
+## Should I use Electron?
 
 > (If you're already sure you need Electron, skip down to "Getting Started").
 
@@ -41,7 +50,7 @@ Consider **not** using Electron if:
   native development are very thoroughly documented, better than Electron. (Exception: Unless you
   really know HTML/CSS/Node.js well and are very unwilling to learn the native APIs. See above.)
 
-#### Cross-platform Electron
+### Cross-platform Electron
 
 In my opinion Electron shines brightest when your goal is to deliver one app on multiple native
 OS's (e.g. Windows+Mac, or Mac+Linux, or all three.) Electron significantly reduces, thought it
@@ -78,34 +87,25 @@ Building and packaging in particular is one of those aspects; there's no single 
 no crossbuild tools for Electron, you just have to debug each platform. I've done some of that
 for you, see below.
 
-#### Why this example Electron app
+# Get Started
 
-Electron, Typescript, NPM, Node.js, Electron-Forge, Squirrel, and other tools are very useful,
-but are also full of rough edges and bad opinions. This project demonstrates a file structure
-and build scripts that smoosh these tools together into a usable, capable project. In most
-cases the many inter-operation problems are papered over using codegens and/or build scripts.
-Although not ideal, this is often the only way to get these tools to work. The resulting
-arrangemnt is fragile, but I hope it gives you a useful starting point.
-
-## Get Started
-
-#### Set up this demo as-is:
+### Set up this demo as-is:
 
 - `nvm use v16`  (or any later version you have should work)
 - `git clone where/did/you/find/this/repo/helloelectron`
 - `cd helloelectron`
 - `node electron/scripts/builder.js setup`
 
-#### Build and run the example in electron's development mode:
+### Build and run the example in electron's development mode:
 
 - `node electron/scripts/builder.js run`
 
-#### Package the hello app for your platform:
+### Package the hello app for your platform:
 
 - `node electron/scripts/builder.js package`
 - (on MacOS): `open ./electron/out/dist/helloelectron.app`
 
-#### Make your own app:
+### Make your own app:
 
 This is meant to be a template, not a tool, meaning that to use these patterns in your own
 app, you will mostly clone this structure and modify the files. I didn't try to package this
@@ -142,7 +142,7 @@ example as a library, or make it easy to take new versions of this example in th
     each file. You can search and replace the `getPlatformInfo` IPC for an example.
 
 
-#### Create your own tests
+### Create your own tests
 
 1. Create one or more files named "test_xxx.ts" in the test/src folder or test/websrc folder.
    (test/src files will execute in the main process, and test/websrc files will execute in
@@ -157,7 +157,7 @@ example as a library, or make it easy to take new versions of this example in th
 5. Run `./scripts/builder.js test`
 
 
-#### Package your app
+### Package your app
 
 > **Note:** You can only create a package for the platform currently running the tools. There is no
 > cross-platform packaging for Electron, see "Known issues" below.
@@ -173,7 +173,7 @@ example as a library, or make it easy to take new versions of this example in th
   - **On Windows**: `electron/out/dist/appname-win32-x64-0.0.1-installer.zip`
 
 
-#### Remote updates for your app
+### Remote updates for your app
 
 If you want to use the remote update facility, then you can distribute updates to your app to your
 existing users by placing a new bundle at a pre-determined URL that you control. To set up remote
@@ -201,7 +201,7 @@ updates:
    `...updateinfo-0.0.5.json`. All versions in the wild will skip straight to 0.0.6.
 
 
-### Security design advice
+## Security design advice
 
 - TLDR, **Don't let Electron download code from the internet, because there is no safe way to do so.**
 - Although Electron is built on Chromium as an implementation detail, don't design your
@@ -217,11 +217,11 @@ updates:
 - See below for further design rationale.
 
 
-### File structure
+## File structure
 
 Here's some more detail on where to put which kinds of files so that they are built and packaged:
 
-#### Source code
+### Source code
 
 - / : root of your project, put whatever you want in here, it will be ignored
 - /electron : root of all code that will be part of electron
@@ -232,7 +232,7 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/web : root of code and configuration for the renderer process
 - /electron/web/src : Typescript code to be compiled for the renderer process
 
-#### Dependencies
+### Dependencies
 
 - /electron/main/lib : any files which are to be forwarded as-is into the electron bundle
 - /electron/main/lib/win : files that should only go into the Windows electron bundle
@@ -243,7 +243,7 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/web/lib/js : If there are any non-TS files to be served directly, they go here
 - /electron/web/node_modules : TODO - check if web modules work
 
-#### Assets
+### Assets
 
 - /electron/web/css : SASS source files which to be compiled into CSS for the renderer process
 - /electron/web/lib/images : Image source files available to the renderer
@@ -252,7 +252,7 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/art/macos-icon.png : A separate graphic for the Apple style guide which will show in the MacOS dock
 - /electron/main/lib/win/installation.gif : The Winstaller installation animated GIF
 
-#### Test code
+### Test code
 
 - /electron/test : place for tests to be authored.
 - /electron/test/src : Typescript test source code which runs in the main process.
@@ -261,7 +261,7 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/test/data : Data that's made available to each test and reset, see testconfig.json:testdata
 - /electron/test/testconfig.json : Defines per-test setup behavior like custom argvs
 
-#### Generated outputs
+### Generated outputs
 
 When you run `electron/scripts/builder.js` it generally puts things under "out". In detail:
 
@@ -282,9 +282,9 @@ When you run `electron/scripts/builder.js` it generally puts things under "out".
 - /electron/out/testdata : a copy of /test/data which is copied between each test run, accessed during tests
 
 
-## Design Rationale
+# Design Rationale
 
-### Objectives
+## Objectives
 
 After struggling with Electron for a couple years, I wanted to start over with a cleaner
 and more capable project structure. Here were my goals:
@@ -315,7 +315,7 @@ P2:
 - Compiled CSS in TBD CSS abstraction language (SASS?)
 - Scaffolding that I find useful to have in graphical Electron apps
 
-### Challenges
+## Challenges
 
 A partial list of problems that this project works around, mostly through wrapper scripts, copying, and symlinking:
 
@@ -337,7 +337,7 @@ A partial list of problems that this project works around, mostly through wrappe
   client-side complexity, and some of them refuse to work without running a live server with a Reddis cluster
   (lol) and other Things That Are Not Simply A Static File. For this demo I have trimmed down what's needed.
 
-### Dependencies
+## Dependencies
 
 - **node.js** - to run build script
 - **electron** - to build the app
@@ -353,7 +353,7 @@ A partial list of problems that this project works around, mostly through wrappe
 - **better-sqlite3** - if you want to use a SQLite database with your app
 
 
-### Appeasing Typescript
+## Appeasing Typescript
 
 One significant challenge is finding a directory structure and tsconfig which simultaneously
 appease several different conflicting audiences for the Typescript and its compiled output:
@@ -410,9 +410,9 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   symlinks.
 
 
-## Known issues and Future Work
+# Known issues and Future Work
 
-### Packaging
+## Packaging
 
 - No self-update facility is offered for Linux. It's expected that users will use their
   platform's .deb-based package manager instead.
@@ -426,7 +426,7 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   OSes (MacOS and Windows) are actively hostile to receiving packages not created using their
   proprietary signing tools, which are only available on their hardware.
 
-### Security considerations
+## Security considerations
 
 - The electron version is pinned at 20.3.5, and node 16. There are definitely later versions, and
   you could try to update them for features or security. Unfortunately the later versions of Electron
@@ -441,7 +441,7 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 - "Electron Security Warning" shows up in the dev console for unpackaged apps. I think if you want
   to use things like jquery within your render process, this is unavoidable?
 
-### Debugging
+## Debugging
 
 - node.js should have source maps but can't be turned on by electron, so i am using the
   "source-map-support" which demands a manual line added to every js file.
@@ -450,14 +450,14 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   that doesn't permit its corresponding source map file to ever be accessible.
 - I haven't tried attaching a remote debugger to the node.js process, not sure if that works.
 
-### Directory structure and extraneous files
+## Directory structure and extraneous files
 
 - Forge manipulates NPM during its build process, so an npm install is necessary to
   recover from the packager's behavior. This means we depend on NPM's servers for packaging.
 - The scripts directory has to have a package.json file to appease node.js for modules.
 
 
-### TODOs
+## TODOs
 
 - ✅ get ts working in main process in a basic way
 - ✅ try compiled.js and see if source map works in renderer
