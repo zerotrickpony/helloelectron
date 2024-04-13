@@ -46,8 +46,7 @@ export class ErrorReport {
         html(`The app has encountered ${what} unhandled error. Please let me know!
           The information below will help me debug this problem, so please click
           <b>Copy Error Report To Clipboard</b> and then paste the text into an <b>email</b> and send it to
-          <a href="mailto:rus@zerotrickpony.com">rus@zerotrickpony.com</a>. Bug reports appreciated.
-          And, sorry about that!`);
+          me. Bug reports appreciated. And, sorry about that!`);
 
     // Copy button
     const copyButton = div.add('<button class=copy />').
