@@ -7,6 +7,7 @@ export interface MainIpc {
   getTestData(): Promise<TestData>;
   setTestData(key: keyof TestData, value: any): Promise<void>;
   getRecipes(): Promise<RecipeRow[]>;
+  logCrash(report: string): Promise<void>;
 
   // TODO - hasUpdate();
   // TODO - allowUpdate();

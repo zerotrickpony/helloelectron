@@ -47,6 +47,14 @@ export class TestRunner {
     } catch (e) {
       Logger.error(e, `Test FAILED: ${testName}`);
       result = 'failure';
+    }
+
+    if (Main.lifetimeCrashCount > 0) {
+      Logger.log(`Test FAILED: ${testName} (crash)`);
+      result = 'failure';  // if there was a crash at all, consider the test to have failed
+    }
+
+    if (result === 'failure') {
       Main.INSTANCE.win.webContents.openDevTools();
     }
 

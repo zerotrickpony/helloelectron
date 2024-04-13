@@ -1,6 +1,7 @@
 // This module runs from electronmain.html, AFTER all the tests are loaded.
 import {App} from '../../web/src/app';
 import {ALL_TESTS} from '../src/common/commontesting';
+import {ErrorReport} from '../../web/src/util/crashes';
 
 // Fetches the TestData by IPC and runs the desired web test, if any.
 export class WebTestRunner {
@@ -22,6 +23,11 @@ export class WebTestRunner {
       console.error(`Test FAILED: ${testData.testName}`);
       console.error(e);
       result = 'failure';
+    }
+
+    if (ErrorReport.lifetimeCrashCount > 0) {
+      console.error(`Test FAILED: ${testData.testName} (crash)`);
+      result = 'failure';  // if there was a crash at all, consider the test to have failed
     }
 
     // The main process test runner will report this result via a testresult.json file

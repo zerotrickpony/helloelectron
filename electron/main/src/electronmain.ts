@@ -4,6 +4,7 @@
 // if (require('./selfupdater').handleSquirrelInstallerEvents()) return;
 
 // Otherwise normal startup
+import 'source-map-support/register';  // This is needed to fix source maps in node.js stack traces
 import nodepath from 'path';
 import {fileURLToPath} from 'url';
 import {DemoDB} from './demodb';
@@ -28,6 +29,7 @@ app.whenReady().then(() => new Main());
 // The main electron app.
 export class Main {
   static INSTANCE: Main;
+  static lifetimeCrashCount = 0;
 
   win: BrowserWindow;
   ipc: IpcHandler;
@@ -67,6 +69,7 @@ export class Main {
     //   return;  // ignore normal cancellation exceptions
     // }
 
+    Main.lifetimeCrashCount++;
     console.error(e);
     if (this.win) {
       const error = e && e.stack ? e.stack : `${e}`;
@@ -111,5 +114,3 @@ export class Main {
     }
   }
 }
-
-import 'source-map-support/register';  // TODO - is there a better way to get source map support?

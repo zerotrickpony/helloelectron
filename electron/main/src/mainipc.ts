@@ -86,6 +86,12 @@ export class IpcHandler implements MainIpc {
     }
   }
 
+  // Called when the render process traps a crash
+  async logCrash(report: string): Promise<void> {
+    Main.lifetimeCrashCount++;
+    console.error(report);
+  }
+
   // Same as above but is fired from the command Q handler.
   async handleQuitEvent(e: Event): Promise<void> {
     e.preventDefault();
@@ -123,5 +129,3 @@ export class IpcClient implements BrowserIpc {
   handleFatalError(...args: any[]) {this.send('handleFatalError', args)}
   handleLog       (...args: any[]) {this.send('handleLog',        args)}
 }
-
-import 'source-map-support/register';  // TODO - is there a better way to get source map support?

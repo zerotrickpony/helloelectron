@@ -1,4 +1,5 @@
 import {DomBox} from './html';
+import {fork} from '../../../main/src/common/commonutil';
 import {IpcClient} from '../browseripc';
 
 // A minimal GUI for apologizing to the user for a fatal error
@@ -33,6 +34,7 @@ export class ErrorReport {
     }
 
     ErrorReport.report = this.toReportText(e) + '\n\n' + ErrorReport.report;
+    fork(async x => await this.ipc.logCrash(ErrorReport.report));
     if (ErrorReport.currentReport) {
       ErrorReport.currentReport.update();
       return;
