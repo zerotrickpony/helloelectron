@@ -1,16 +1,18 @@
 // Implements the IPC commands called from the renderer process.
 import {app, BrowserWindow} from 'electron';
 import {Main} from './electronmain';
-import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData} from './common/schema';
+import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData, RecipeRow} from './common/schema';
 import {fork} from './common/commonutil';
-import {readPackagePropertyFile, getHomeDir} from './util';
+import {readPackagePropertyFile, getHomeDir} from './util/files';
 import {Logger} from './logger';
+import {DemoDB} from './demodb';
 
 // TODO - import {SelfUpdater} from './selfupdater';
 
 // The command handler object which handles IPC requests from the Electron renderer.
 export class IpcHandler implements MainIpc {
   win: BrowserWindow;
+  db: DemoDB;
   systemTestData = new TestData();
   browserClient: BrowserIpc;
   platformInfo?: PlatformInfo;  // set on first use
@@ -19,6 +21,7 @@ export class IpcHandler implements MainIpc {
     // TODO this.updater = new SelfUpdater(this);
     this.win = main.win;
     this.browserClient = new IpcClient(this.win);
+    this.db = main.db;
 
     if (opt_systemTestData) {
       // set to empty by electronmain, filled in for automated tests
@@ -42,6 +45,20 @@ export class IpcHandler implements MainIpc {
       const error = e.stack;
       return {error};  // util.sendIPC will rethrow this from within the render process
     }
+  }
+
+  // Returns a report of all the recipes in the demo database
+  async getRecipes(): Promise<RecipeRow[]> {
+    if (!this.db.isConnected()) {
+      Logger.log(`Connecting to database...`);
+      await this.db.connect();
+    }
+    const recipes = await this.db.getRecipes();
+    if (recipes.length < 1) {
+      // Aww we feel bad that there's no recipes yet. Let's start you off.
+      await this.db.addRecipe('First Recipe', `For this you'll need water.`);
+    }
+    return await this.db.getRecipes();;
   }
 
   async getPlatformInfo(): Promise<PlatformInfo> {
@@ -87,7 +104,7 @@ export class IpcHandler implements MainIpc {
   }
 }
 
-// The browser IPC client
+// IPC client for sending messages up to the render process.
 export class IpcClient implements BrowserIpc {
   win: BrowserWindow;
 

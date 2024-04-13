@@ -1,13 +1,12 @@
 // Interfaces that are common to both the main and render processes.
 
-export type AFN = Promise<any>;
-
 // The interface from the render process down to the main process.
 export interface MainIpc {
   getPlatformInfo(): Promise<PlatformInfo>;
-  quit(relaunch: boolean, exitCode: number): AFN;
+  quit(relaunch: boolean, exitCode: number): Promise<void>;
   getTestData(): Promise<TestData>;
-  setTestData(key: keyof TestData, value: any): AFN;
+  setTestData(key: keyof TestData, value: any): Promise<void>;
+  getRecipes(): Promise<RecipeRow[]>;
 
   // TODO - hasUpdate();
   // TODO - allowUpdate();
@@ -40,3 +39,10 @@ export class TestData {
   testName?: string;  // The current web test name to launch, if any
   isWeb = false;  // True if the current test to run is in the renderer process
 }
+
+// A demo type
+export interface RecipeRow {
+  id: number,
+  name: string,
+  text: string
+};

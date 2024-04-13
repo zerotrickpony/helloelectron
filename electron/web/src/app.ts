@@ -18,7 +18,13 @@ export class App {
 
   async run() {
     const info = await this.ipc.getPlatformInfo();
+    const recipes = await this.ipc.getRecipes();
     $('BODY').append('<div id=main />');
-    $('#main').text(`Platform info:\n${JSON.stringify(info, null, 2)}`);
+    $('#main').text(`
+      Platform info:
+      ${JSON.stringify(info, null, 2)}
+
+      Recipes:
+      ${JSON.stringify(recipes, null, 2)}`);
   }
 }

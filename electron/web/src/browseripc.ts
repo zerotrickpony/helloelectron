@@ -1,6 +1,8 @@
-import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData, AFN} from '../../main/src/common/schema';
+import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData} from '../../main/src/common/schema';
 import {App} from './app';
 import {ErrorReport} from './util/crashes';
+
+type AFN = Promise<any>;
 
 // The command handler object which handles IPC requests from the Electron renderer, and sends IPC requests to the server.
 export class IpcHandler implements BrowserIpc {
@@ -95,4 +97,5 @@ export class IpcClient implements MainIpc {
   async quit           (...args: any[]): AFN {return await this.send('quit'           , args);}
   async getTestData    (...args: any[]): AFN {return await this.send('getTestData'    , args);}
   async setTestData    (...args: any[]): AFN {return await this.send('setTestData'    , args);}
+  async getRecipes     (...args: any[]): AFN {return await this.send('getRecipes'     , args);}
 }

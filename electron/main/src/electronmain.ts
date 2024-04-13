@@ -6,7 +6,7 @@
 // Otherwise normal startup
 import nodepath from 'path';
 import {fileURLToPath} from 'url';
-import 'better-sqlite3';
+import {DemoDB} from './demodb';
 
 import {app, BrowserWindow, ipcMain, protocol} from 'electron';
 import {IpcHandler} from './mainipc';
@@ -31,6 +31,7 @@ export class Main {
 
   win: BrowserWindow;
   ipc: IpcHandler;
+  db: DemoDB;
 
   constructor() {
     if (Main.INSTANCE) {
@@ -49,6 +50,7 @@ export class Main {
 
     // Launch the window
     this.win = this.createWindow();
+    this.db = new DemoDB(nodepath.join(__dirname, 'demodb.db'));
     this.ipc = new IpcHandler(this, SYSTEMTESTDATA);
   }
 
