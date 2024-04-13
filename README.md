@@ -91,11 +91,12 @@ arrangemnt is fragile, but I hope it gives you a useful starting point.
 
 #### Set up this demo as-is:
 
+- `nvm use v16`  (or any later version you have should work)
 - `git clone where/did/you/find/this/repo/helloelectron`
 - `cd helloelectron`
 - `node electron/scripts/builder.js setup`
 
-#### Run the example in electron's development mode:
+#### Build and run the example in electron's development mode:
 
 - `node electron/scripts/builder.js run`
 
@@ -153,7 +154,7 @@ example as a library, or make it easy to take new versions of this example in th
 4. Note that the tests run immediately, but you may want to wait for your app finish its own
    notion of startup / setup / readiness before your test runs. One way to do this is to start
    the test with a `"await waitFor(someGuiElementToAppear)"` type statement.
-5. Run `./scripts/builder test`
+5. Run `./scripts/builder.js test`
 
 
 #### Package your app
@@ -161,7 +162,7 @@ example as a library, or make it easy to take new versions of this example in th
 > **Note:** You can only create a package for the platform currently running the tools. There is no
 > cross-platform packaging for Electron, see "Known issues" below.
 
-1. Run `./scripts/builder package`
+1. Run `./scripts/builder.js package`
 2. Test the package locally / in-place. The in-place runnables are:
   - **On MacOS**: `open ./electron/out/dist/appname.app` (you can copy this to /Applications as-is)
   - **On Windows**: `./electron/out/dist/appname-0.0.1\ Setup.exe`
@@ -184,7 +185,7 @@ updates:
 2. Set `"previousversion"` to whatever the prior semver was, if any. This is used to set the
    name of the updateinfo file, which is probed by apps of that version in the wild to discover
    updates. By default it checks once an hour.
-3. Run `./scripts/builder package` as usual; this will generate an update info file and print out
+3. Run `./scripts/builder.js package` as usual; this will generate an update info file and print out
    its exact name. For example `./electron/out/dist/helloelectron-darwin-arm64-updateinfo-0.0.3.json`.
    The update package will also be created.
 4. Host the packaged distributable at the exact URL mentioned within the updateinfo file. The script
@@ -338,20 +339,18 @@ A partial list of problems that this project works around, mostly through wrappe
 
 ### Dependencies
 
-- node.js
-- electron
-- npm
-- typescript
-- electron-forge
-- requirejs (for bootstrapping JS modules into the render process)
-- squirrel (for the windows installer, and the OTA updater)
-- better-sqlite3 (not necessary but proves that NPM works)
-- VSCode (not a build dependency but implicit in the environment)
-- Bash (there are a few short bash scripts on non-Windows)
-- BAT files (Windows only, mostly they just run node.js)
-- Sass (for CSS)
-- source-map-support (a workaround for typescript sources in stack traces)
-- VSCode emeraldwalk.runonsave extension (for running build scripts on file save)
+- **node.js** - to run build script
+- **electron** - to build the app
+- **npm** - to bring in typescript and other tools
+- **typescript** - if you want to compile typescript into javascript
+- **electron-forge** - for packaging
+- **requirejs** - for bootstrapping JS modules into the render process
+- **squirrel** - for the windows installer, and the OTA updater
+- **VSCode** - not a build dependency but implicit in the environment
+- **Sass** - if you want compiled SCSS
+- **source-map-support** - a workaround for typescript sources in stack traces
+- **VSCode emeraldwalk.runonsave extension** - for running build scripts on file save
+- **better-sqlite3** - if you want to use a SQLite database with your app
 
 
 ### Appeasing Typescript
@@ -472,6 +471,7 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 - ✅ write out updateinfo.json as part of packaging
 - ✅ Logger facility
 - ✅ rename HtmlBuilder to something more pithy like DBox or DomBox or DivBox or NodeBox.
+- ✅ try using a native dependency like better-sqlite3, and add the electron rebuild statement to the script
 - ✅ get tests working
   - ✅ compile a version of the app with the test code in it
   - ✅ make sure that code in test can refer to prod code
@@ -485,8 +485,10 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   - ✅ open dev console on test failure
   - ✅ test/data redeployments
   - ✅ just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
+  - ✅ consider any crash anywhere in the app to also be a test failure.
+  - need to put a test/node_modules and a test/package.json in there
 - updater scheme / OTA update support
-- im not sure that source maps are working in node
+- restart app button in crash reporter doesnt work
 - try npm install non-dev web dependencies, what happens to them?
 - add wrapper scripts for "npm install --save"
 - test packaging: Linux
@@ -494,3 +496,4 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 - test packaging: Mac x64
 - pref support?
 - demonstrate mixing in raw JS?
+- backport all my web test matchers into this example
