@@ -92,7 +92,7 @@ for you, see below.
 ### Set up this demo as-is:
 
 - `nvm use v16`  (or any later version you have should work)
-- `git clone where/did/you/find/this/repo/helloelectron`
+- `git clone https://github.com/zerotrickpony/helloelectron.git`
 - `cd helloelectron`
 - `node electron/scripts/builder.js setup`
 
