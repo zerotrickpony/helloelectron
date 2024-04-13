@@ -47,6 +47,7 @@ export class TestRunner {
     } catch (e) {
       Logger.error(e, `Test FAILED: ${testName}`);
       result = 'failure';
+      Main.INSTANCE.win.webContents.openDevTools();
     }
 
     // Write out a status file with the result.
