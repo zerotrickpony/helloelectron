@@ -103,6 +103,9 @@ async function install() {
     // This thing only works on Mac; we use it during icon generation
     await execNpm(projectPath('main'), 'install', '--no-save', 'iconz@0.3.9');
   }
+
+  // This seems to be needed for SQLite and other native NPM modules
+  await execScript(projectPath('main'), projectPath('main/node_modules/.bin/electron-rebuild'));
 }
 
 // Builds the main process code
