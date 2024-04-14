@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "description": "A basic electron app with my various build opinions.",
   "main": "electronmain.js",
-  "author": "zerotrickpony",
+  "author": "you@you.com",
   "license": "Apache Creative Commons 2.0",
-  "updatehost": "https://www.zerotrickpony.com/helloelectron/dist",
+  "updatehost": "https://www.exampledomain.com/helloelectron/dist",
   "previousversion": "0.0.0",
   "scripts": {
     "browsertests": "electron ./electrontest.js",
