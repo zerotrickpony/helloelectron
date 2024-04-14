@@ -30,8 +30,9 @@ Electron is a framework for making **native apps** on Windows, MacOS, and Linux.
 Consider **not** using Electron if:
 
 - You want to deliver only mobile apps. Consider Fluttr or Instant apps.
-- You want to deliver game-like 3D graphics. Consider Unity.
-- You want a "write once" app that deploys to MacOS, iOS, Android, Windows, etc. Consider Unity.
+- You want to deliver game-like 3D graphics. Consider Godot or Unreal.
+- You want a "write once" app that deploys to MacOS, iOS, Android, Windows, etc. Consider Godot,
+  Fluttr, or just write multiple apps.
 - You don't really need any native-only facilities, such as opening a server socket or accessing
   the user's local disk carte blanche. If you just need a GUI, consider delivering as a web page,
   it will be less work and your users will be able to access it more easily.
@@ -91,7 +92,7 @@ for you, see below.
 
 ### Set up this demo as-is:
 
-- `nvm use v16`  (or any later version you have should work)
+- `nvm use v16`  (you don't have to use nvm if you have some other way of using node; any 16+ version should work)
 - `git clone https://github.com/zerotrickpony/helloelectron.git`
 - `cd helloelectron`
 - `node electron/scripts/builder.js setup`
