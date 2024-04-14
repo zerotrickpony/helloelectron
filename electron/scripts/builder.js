@@ -228,7 +228,7 @@ async function packageElectron() {
   fs.writeFileSync(projectPath('out/package/lib/updateinfo.txt'), updateUrl);
 
   // Run Forge
-  fs.cpSync(projectPath('main/darwin_forge.config.js'), projectPath('out/package/forge.config.js'));
+  fs.cpSync(projectPath(`main/${platform}_forge.config.js`), projectPath('out/package/forge.config.js'));
   await execScript(projectPath('out/package'), projectPath('out/package/node_modules/.bin/electron-forge'), 'make');
 
   // Fix NPM afterwards, since Forge prunes away dev dependencies
