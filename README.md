@@ -489,12 +489,14 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   - ✅ consider any crash anywhere in the app to also be a test failure.
   - need to put a test/node_modules and a test/package.json in there
 - updater scheme / OTA update support
-- restart app button in crash reporter doesnt work
+- bug: restart app button in crash reporter doesnt work
 - try npm install non-dev web dependencies, what happens to them?
 - add wrapper scripts for "npm install --save"
 - test packaging: Linux
+  - linux packager has wrong path, it should refer to the .deb not the zip
 - test packaging: Win
+  - add Windows signing instructions and setup
 - test packaging: Mac x64
-- pref support?
+- notarization for macos
 - demonstrate mixing in raw JS?
 - backport all my web test matchers into this example

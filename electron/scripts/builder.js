@@ -251,6 +251,7 @@ async function stage(packageInfo) {
   // Stage the zip
   const zipname = `${name}-${platform}-${arch}-${version}.zip`;
   const zipfile = projectPath(`out/dist/${zipname}`);
+  // TODO - on linux this is electron/out/package/out/make/deb/x64/helloelectron_0.0.1_amd64.deb
   fs.renameSync(projectPath(`out/package/out/make/zip/${platform}/${arch}/${zipname}`), zipfile);
 
   const sha256 = getSHA256(zipfile);
