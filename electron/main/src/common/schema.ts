@@ -17,7 +17,8 @@ export interface MainIpc {
 export interface BrowserIpc {
   handleQuitting(): void;
   handleFatalError(error: string): void;
-  handleLog(message: string, error: string|undefined): void;
+  handleUpdateReady(): void;
+  handleLog(message?: string, error?: string): void;
 }
 
 export interface IpcResult {

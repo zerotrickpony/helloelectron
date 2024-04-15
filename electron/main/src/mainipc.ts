@@ -4,6 +4,7 @@ import {Main} from './electronmain';
 import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData, RecipeRow} from './common/schema';
 import {fork} from './common/commonutil';
 import {readPackagePropertyFile, getHomeDir} from './util/files';
+import {SelfUpdater} from './selfupdater';
 import {Logger} from './logger';
 import {DemoDB} from './demodb';
 
@@ -15,6 +16,7 @@ export class IpcHandler implements MainIpc {
   db: DemoDB;
   systemTestData = new TestData();
   browserClient: BrowserIpc;
+  updater: SelfUpdater;
   platformInfo?: PlatformInfo;  // set on first use
 
   constructor(main: Main, opt_systemTestData?: TestData) {
@@ -22,6 +24,7 @@ export class IpcHandler implements MainIpc {
     this.win = main.win;
     this.browserClient = new IpcClient(this.win);
     this.db = main.db;
+    this.updater = new SelfUpdater(this.browserClient);
 
     if (opt_systemTestData) {
       // set to empty by electronmain, filled in for automated tests
@@ -80,7 +83,7 @@ export class IpcHandler implements MainIpc {
 
   async quit(relaunch: boolean = false, exitCode = 0): Promise<void> {
     if (relaunch) {
-      // TODO - this.updater.relaunch();
+      this.updater.relaunch();
     } else {
       app.exit(exitCode);
     }
@@ -125,7 +128,8 @@ export class IpcClient implements BrowserIpc {
 
   // Note that unlike the render IPC, the browser IPCs are blind fire so you don't get a response.
   // TODO - it would be nice to auto-generate these dispatchers since they're all the same.
-  handleQuitting  (...args: any[]) {this.send('handleQuitting',   args)}
-  handleFatalError(...args: any[]) {this.send('handleFatalError', args)}
-  handleLog       (...args: any[]) {this.send('handleLog',        args)}
+  handleQuitting   (...args: any[]) {this.send('handleQuitting',    args)}
+  handleFatalError (...args: any[]) {this.send('handleFatalError',  args)}
+  handleLog        (...args: any[]) {this.send('handleLog',         args)}
+  handleUpdateReady(...args: any[]) {this.send('handleUpdateReady', args)}
 }

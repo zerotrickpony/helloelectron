@@ -49,6 +49,11 @@ export class IpcHandler implements BrowserIpc {
     new ErrorReport(this.mainClient, e);
   }
 
+  // Called when the self updater has successfully downloaded and staged an update.
+  handleUpdateReady(): void {
+    console.log(`Update ready!`);
+  }
+
   // Called when the main process logs something that we want to show in the console.
   handleLog(message: string, error: string): void {
     if (message) {

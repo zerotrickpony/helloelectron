@@ -491,12 +491,16 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 - updater scheme / OTA update support
 - bug: restart app button in crash reporter doesnt work
 - try npm install non-dev web dependencies, what happens to them?
+- add toasts to the GUI, and toast on update
 - add wrapper scripts for "npm install --save"
+- test updater on mac
 - test packaging: Linux
   - linux packager has wrong path, it should refer to the .deb not the zip
 - test packaging: Win
   - add Windows signing instructions and setup
+  - test updater
 - test packaging: Mac x64
 - notarization for macos
+- the default behavior of the app shows an ugly printout, this is not a good demo.
 - demonstrate mixing in raw JS?
 - backport all my web test matchers into this example

@@ -1,7 +1,12 @@
-// // TODO - updater
-// // These kooky things happen when the Windows installer is running us.
-// if (require('electron-squirrel-startup')) return;
-// if (require('./selfupdater').handleSquirrelInstallerEvents()) return;
+// Note, these need to go at the top before other code runs, because they early exit.
+import winSquirrel from 'electron-squirrel-startup';
+if (winSquirrel) {
+  process.exit(0);  // This only happens when the Squirrel Windows installer is running us.
+}
+import {handleSquirrelInstallerEvents} from './selfupdater';
+if (handleSquirrelInstallerEvents()) {
+  process.exit(0);  // This only happens when the Squirrel Windows installer is running us.
+}
 
 // Otherwise normal startup
 import 'source-map-support/register';  // This is needed to fix source maps in node.js stack traces
@@ -98,7 +103,7 @@ export class Main {
       }
   }
 
-  private logErrorToIpc(error: Error, message: string) {
+  private logErrorToIpc(error?: Error, message?: string) {
     if (message) {
       console.log(message);
     }
