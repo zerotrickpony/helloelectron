@@ -488,7 +488,7 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   - ✅ just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
   - ✅ consider any crash anywhere in the app to also be a test failure.
   - need to put a test/node_modules and a test/package.json in there
-- updater scheme / OTA update support
+- ✅ updater scheme / OTA update support
 - bug: restart app button in crash reporter doesnt work
 - try npm install non-dev web dependencies, what happens to them?
 - add toasts to the GUI, and toast on update
