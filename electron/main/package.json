@@ -7,10 +7,6 @@
   "license": "Apache Creative Commons 2.0",
   "updatehost": "https://www.exampledomain.com/helloelectron/dist",
   "previousversion": "0.0.0",
-  "scripts": {
-    "browsertests": "electron ./electrontest.js",
-    "systemtests": "electron ./gentestmain.js"
-  },
   "dependencies": {
     "better-sqlite3": "8.0.1",
     "electron-squirrel-startup": "1.0.0",

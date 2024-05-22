@@ -1,6 +1,7 @@
 import {readFileSync} from 'fs';
 import {createHash, randomBytes} from 'crypto';
-import {join} from 'path';
+import {join, resolve, basename} from 'path';
+import {spawn} from 'child_process';
 import {Logger} from './logger';
 import fetch from 'node-fetch';
 import {autoUpdater, app} from 'electron';
@@ -352,26 +353,22 @@ export function handleSquirrelInstallerEvents() {
     return false;
   }
 
-  const ChildProcess = require('child_process');
-  const path = require('path');
+  const appFolder = resolve(process.execPath, '..');
+  const rootAtomFolder = resolve(appFolder, '..');
+  const updateDotExe = resolve(join(rootAtomFolder, 'Update.exe'));
+  const exeName = basename(process.execPath);
 
-  const appFolder = path.resolve(process.execPath, '..');
-  const rootAtomFolder = path.resolve(appFolder, '..');
-  const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
-  const exeName = path.basename(process.execPath);
-
-  const spawn = function(command: string, args: string[]) {
-    let spawnedProcess, error;
-
+  const spawnFn = function(command: string, args: string[]) {
     try {
-      spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
-    } catch (error) {}
-
-    return spawnedProcess;
+      return spawn(command, args, {detached: true});
+    } catch (e) {
+      console.error(e);
+      return undefined;
+    }
   };
 
   const spawnUpdate = function(args: string[]) {
-    return spawn(updateDotExe, args);
+    return spawnFn(updateDotExe, args);
   };
 
   const squirrelEvent = process.argv[1];

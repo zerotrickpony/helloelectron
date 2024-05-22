@@ -100,7 +100,7 @@ export class IpcClient implements MainIpc {
 
   // TODO - it would be nice to auto-generate these dispatchers since they're all the same.
   async quit           (...args: any[]): AFN {return await this.send('quit'           , args);}
-  async logCrash       (...args: any[]): AFN {return await this.send('logCrash'     , args);}
+  async logCrash       (...args: any[]): AFN {return await this.send('logCrash'       , args);}
   async getTestData    (...args: any[]): AFN {return await this.send('getTestData'    , args);}
   async setTestData    (...args: any[]): AFN {return await this.send('setTestData'    , args);}
   async getRecipes     (...args: any[]): AFN {return await this.send('getRecipes'     , args);}

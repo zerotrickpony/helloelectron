@@ -10,6 +10,9 @@ import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readT
         execScriptAndGetResult, rmProjectFile, parseJson, stripSourceMap, getSHA256,
         rewriteInPlace} from './_base.js';
 
+// Add environment
+process.env['ELECTRON_TRASH'] = 'trash-cli';
+
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
       cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss]],
@@ -29,10 +32,12 @@ const COMMANDS = new Map([
       buildIcons]],
   ['run', ['Builds and runs the Electron app in development mode',
       buildMain, buildWeb, buildCss, runDev]],
+  ['checkdeps', ['Checks for circular dependencies in the typescript.',
+      checkDeps]],
   ['test', ['Builds the test harness and runs each test',
-      buildMain, buildWeb, buildCss, buildTest, runTests]],
+      buildMain, buildWeb, buildCss, buildTest, checkDeps, runTests]],
   ['package', ['Packages a distributable Electron binary for the current platform',
-      cleanOut, buildMain, buildWeb, buildCss, buildIcons, packageElectron]],
+      cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -47,6 +52,7 @@ const EXPLAIN = new Map([
   [buildWeb, 'Builds typescript into compiled.js and electron dependencies for the render process'],
   [buildCss, 'Builds the CSS into compiled.css'],
   [runDev, 'Quickly launches the Electron app in development mode (pre-packaged)'],
+  [checkDeps, 'Checks the codebase for circular module dependencies'],
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
   [buildTest, 'Builds all typescript for main and test, including test code'],
@@ -94,12 +100,14 @@ async function cleanOut() {
 async function cleanNpm() {
   fs.rmSync(projectPath('main/node_modules'), {recursive: true, force: true});
   fs.rmSync(projectPath('web/node_modules'), {recursive: true, force: true});
+  fs.rmSync(projectPath('test/node_modules'), {recursive: true, force: true});
 }
 
 // NPM install
 async function install() {
   await execNpm(projectPath('main'), 'install');
   await execNpm(projectPath('web'), 'install');
+  await execNpm(projectPath('test'), 'install');
 
   if (process.platform == 'darwin') {
     // This thing only works on Mac; we use it during icon generation
@@ -174,6 +182,14 @@ async function runDev() {
   await execScript(p, electron, '.');
 }
 
+async function checkDeps() {
+  const web = projectPath('web');
+  const main = projectPath('main');
+  const dpdm = projectPath('web/node_modules/.bin/dpdm');
+  await execScript(main, dpdm, '-T', '--exit-code', 'circular:1', 'src/electronmain.ts');
+  await execScript(web, dpdm, '-T', '--exit-code', 'circular:1', 'src/app.ts');
+}
+
 // Generates ICO and ICNS files from the art/appicon.png file
 async function buildIcons() {
   const main = projectPath('main');
@@ -222,6 +238,9 @@ async function packageElectron() {
   const {name, version, updatehost} = packageInfo;
   const {arch, platform} = process;
   const updateUrl = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`
+  requireValue(name, 'Missing name property in main/package.json');
+  requireValue(version, 'Missing version property in main/package.json');
+  requireValue(updatehost, 'Missing updatehost property in main/package.json');
 
   // Put the version info within the app so the updater can use it
   fs.writeFileSync(projectPath('out/package/lib/appversion.txt'), version);
@@ -247,6 +266,7 @@ async function packageElectron() {
 async function stage(packageInfo) {
   const {name, version, previousversion, updatehost} = packageInfo;
   const {arch, platform} = process;
+  requireValue(previousversion, 'Missing previousversion property in main/package.json');
 
   // Stage the zip
   const zipname = `${name}-${platform}-${arch}-${version}.zip`;
@@ -279,6 +299,7 @@ async function stageWin32(packageInfo) {
 
   const {name, version, previousversion, updatehost} = packageInfo;
   const {arch, platform} = process;
+  requireValue(previousversion, 'Missing previousversion property in main/package.json');
 
   const sqPath = projectPath('out/package/out/make/squirrel.windows/x64');
   const nupkgOrig = `${name}-${version}-full.nupkg`;
@@ -352,7 +373,7 @@ async function buildTest() {
   for (const jsFile of listDirR(projectPath('out/testtsc/test/src'))) {
     if (jsFile.endsWith('.js')) {
       // Example line: \nconst logger_1 = require("../../main/src/logger");\n
-      rewriteInPlace(jsFile, /(\nconst.*? = require\("\.\.)\/\.\.\/main\/src(.*"\);\n)/g, '$1$2');
+      rewriteInPlace(jsFile, /(\nconst.*? = require\("\.\.)\/\.\.\/main\/src(.*"\);)/g, '$1$2');
     } else if (jsFile.endsWith('.js.map')) {
       // Example phrase: "sources":["../../../../test/src/test_start.ts"]
       rewriteInPlace(jsFile, /"sources":\["..\/..\/..\/..\/test\/src\//g, '"sources":["../../../test/src/');
@@ -379,6 +400,12 @@ function checkUnique_(testNames) {
       process.exit(1);
     }
     seen.add(name);
+  }
+}
+
+function requireValue(v, message) {
+  if (!v) {
+    throw new Error(message);
   }
 }
 

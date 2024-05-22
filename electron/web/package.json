@@ -6,6 +6,7 @@
   "license": "Apache Creative Commons 2.0",
   "devDependencies": {
     "@types/jquery": "3.5.29",
+    "dpdm": "3.14.0",
     "typescript": "5.3.3"
   }
 }
