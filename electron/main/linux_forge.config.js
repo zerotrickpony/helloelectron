@@ -1,5 +1,3 @@
-const path = require('path');
-
 module.exports = {
   packagerConfig: {
     executableName: 'helloelectron',
@@ -9,7 +7,11 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        options: {
+          icon: 'web/appicon.png'
+        }
+      }
     },
   ],
 };

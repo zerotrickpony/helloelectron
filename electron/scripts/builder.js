@@ -10,9 +10,6 @@ import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readT
         execScriptAndGetResult, rmProjectFile, parseJson, stripSourceMap, getSHA256,
         rewriteInPlace} from './_base.js';
 
-// Add environment
-process.env['ELECTRON_TRASH'] = 'trash-cli';
-
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
       cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss]],
@@ -223,6 +220,16 @@ async function packageElectron() {
   fs.cpSync(projectPath('web/lib/js'), projectPath('out/package/web/lib/js'), {dereference: true, recursive: true});
   fs.cpSync(projectPath('web/lib/images'), projectPath('out/package/web/lib/images'), {dereference: true, recursive: true});
 
+  if (process.platform == 'linux') {
+    // The DEB packager doesn't like symlinks so we need to copy over everything
+    rmProjectFile('out/package/node_modules');
+    rmProjectFile('out/package/web/appicon.png');
+    rmProjectFile('out/package/web/src');
+    fs.cpSync(projectPath('main/node_modules'), projectPath('out/package/node_modules'), {dereference: false, recursive: true});
+    fs.cpSync(projectPath('art/appicon.png'), projectPath('out/package/web/appicon.png'));
+    fs.cpSync(projectPath('web/src'), projectPath('out/package/web/src'), {dereference: false, recursive: true});
+  }
+
   // Erase platform-specific assets for the other platforms
   for (const otherPlatform of ['darwin', 'win32', 'linux']) {
     if (otherPlatform != process.platform) {
@@ -255,15 +262,17 @@ async function packageElectron() {
 
   // Stage all the output
   fs.mkdirSync(projectPath('out/dist'), {recursive: true});
-  if (process.platform === 'win32') {
+  if (process.platform === 'darwin') {
+    await stageDarwin(packageInfo);
+  } else if (process.platform === 'win32') {
     await stageWin32(packageInfo);
   } else {
-    await stage(packageInfo);
+    await stageLinux(packageInfo);
   }
 }
 
-// Emits the updateinfo.json file which, once on a web server, will make the app update itself.
-async function stage(packageInfo) {
+// Emits the updateinfo.json file and stages the zip. Put these on a web server to make the app update itself.
+async function stageDarwin(packageInfo) {
   const {name, version, previousversion, updatehost} = packageInfo;
   const {arch, platform} = process;
   requireValue(previousversion, 'Missing previousversion property in main/package.json');
@@ -271,7 +280,6 @@ async function stage(packageInfo) {
   // Stage the zip
   const zipname = `${name}-${platform}-${arch}-${version}.zip`;
   const zipfile = projectPath(`out/dist/${zipname}`);
-  // TODO - on linux this is electron/out/package/out/make/deb/x64/helloelectron_0.0.1_amd64.deb
   fs.renameSync(projectPath(`out/package/out/make/zip/${platform}/${arch}/${zipname}`), zipfile);
 
   const sha256 = getSHA256(zipfile);
@@ -280,16 +288,22 @@ async function stage(packageInfo) {
   const updateJsonFile = projectPath(`out/dist/${name}-${platform}-${arch}-updateinfo-${previousversion}.json`);
   fs.writeFileSync(updateJsonFile, JSON.stringify({url, sha256, release: ''}, null, 2));
 
-  if (process.platform === 'darwin') {
-    // Also stage the MacOS app for local execution
-    await execScript(projectPath('out/dist'), 'unzip', zipfile);
-    console.log(`Run darwin App with: open ${projectPath(`out/dist/${name}.app`)}`);
-  }
-
+  // Also stage the MacOS app for local execution
+  await execScript(projectPath('out/dist'), 'unzip', zipfile);
   console.log(`Update info prepared, roll out updates by publishing:`);
-  console.log('ZIP : ' + zipfile);
-  console.log('JSON: ' + updateJsonFile);
-  console.log('Host: ' + updatehost);
+  console.log(`Local: open ${projectPath(`out/dist/${name}.app`)}`);
+  console.log('ZIP  : ' + zipfile);
+  console.log('JSON : ' + updateJsonFile);
+  console.log('Host : ' + updatehost);
+}
+
+// Emits the .deb file. Auto-update is not supported on Linux so no JSON stuff.
+async function stageLinux(packageInfo) {
+  const {name, version} = packageInfo;
+  const debname = `${name}_${version}_amd64.deb`;
+  const debfile = projectPath(`out/dist/${debname}`);
+  fs.renameSync(projectPath(`out/package/out/make/deb/x64/${debname}`), debfile);
+  console.log('DEB prepared: ' + debfile);
 }
 
 // Same as above but with the extra nupkg scheme stuff

@@ -236,7 +236,7 @@ Here's some more detail on where to put which kinds of files so that they are bu
 ### Dependencies
 
 - /electron/main/lib : any files which are to be forwarded as-is into the electron bundle
-- /electron/main/lib/win : files that should only go into the Windows electron bundle
+- /electron/main/lib/win32 : files that should only go into the Windows electron bundle
 - /electron/main/lib/darwin : files that should only go into the MacOS electron bundle
 - /electron/main/lib/linux : files that should only go into the Linux electron bundle
 - /electron/main/node_modules : Electron itself, and any NPM libraries, will be packaged from here
@@ -249,9 +249,9 @@ Here's some more detail on where to put which kinds of files so that they are bu
 - /electron/web/css : SASS source files which to be compiled into CSS for the renderer process
 - /electron/web/lib/images : Image source files available to the renderer
 - /electron/web/lib/data : If present, any other kind of includable resource for the web side
-- /electron/art/appicon.png : The icon graphic which will be used as the live app icon on Windows and Linux
+- /electron/art/appicon.png : The icon graphic which will be copied as the live app icon on Windows and Linux
 - /electron/art/macos-icon.png : A separate graphic for the Apple style guide which will show in the MacOS dock
-- /electron/main/lib/win/installation.gif : The Winstaller installation animated GIF
+- /electron/main/lib/win32/installation.gif : The Winstaller installation animated GIF
 
 ### Test code
 
@@ -489,6 +489,8 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   - ✅ consider any crash anywhere in the app to also be a test failure.
   - need to put a test/node_modules and a test/package.json in there
 - ✅ updater scheme / OTA update support
+- test/ needs to be split up from testweb/, they cant share a single node_modules.
+- add dpdm and run it during tests
 - bug: restart app button in crash reporter doesnt work
 - try npm install non-dev web dependencies, what happens to them?
 - add toasts to the GUI, and toast on update

@@ -9,17 +9,14 @@
       "commands": [
         {
           "match": "electron/web/src/.*",
-          "isAsync": true,
           "cmd": "source ~/.bash_profile && node electron/scripts/builder.js web"
         },
         {
           "match": "electron/web/css/.*",
-          "isAsync": true,
           "cmd": "source ~/.bash_profile && node electron/scripts/builder.js css"
         },
         {
           "match": "electron/main/.*",
-          "isAsync": true,
           "cmd": "source ~/.bash_profile && node electron/scripts/builder.js all"
         }
       ]
