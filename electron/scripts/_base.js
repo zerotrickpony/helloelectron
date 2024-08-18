@@ -57,9 +57,10 @@ export async function execNpm(cwd, ...args) {
 export async function execScript(cwd, ...commandAndArgs) {
   const p = new Promise((resolve, reject) => {
     const command = commandAndArgs[0];
+    const ext = process.platform == 'win32' && command.indexOf('node_modules\\.bin') ? '.cmd' : '';
     const args = commandAndArgs.slice(1);
     const options = {cwd};
-    const p = spawn(command, args, options);
+    const p = spawn(`${command}${ext}`, args, options);
     p.stdout.on('data', (data) => {
       process.stdout.write(data);
     });
