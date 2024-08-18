@@ -139,12 +139,14 @@ async function buildWeb() {
 
   // Forward static resources and typescript source
   fs.mkdirSync(projectPath('out/build/web/web'), {recursive: true});
+  fs.mkdirSync(projectPath('out/build/web/main/src'), {recursive: true});
   fs.mkdirSync(projectPath('out/build/web/lib'), {recursive: true});
 
   symlinkSync(projectPath('art/appicon.png'), projectPath('out/build/web/appicon.png'));
   symlinkSync(projectPath('web/lib/js'), projectPath('out/build/web/lib/js'));
   symlinkSync(projectPath('web/lib/images'), projectPath('out/build/web/lib/images'));
   symlinkSync(projectPath('web/src'), projectPath('out/build/web/web/src'));
+  symlinkSync(projectPath('main/src/common'), projectPath('out/build/web/main/src/common'));
 
   // We depend on require.js for module loading in the render process.
   fs.cpSync(projectPath('web/lib/boot/require.js'), projectPath('out/build/web/require.js'));
@@ -183,8 +185,24 @@ async function checkDeps() {
   const web = projectPath('web');
   const main = projectPath('main');
   const dpdm = projectPath('web/node_modules/.bin/dpdm');
-  await execScript(main, dpdm, '-T', '--exit-code', 'circular:1', 'src/electronmain.ts');
-  await execScript(web, dpdm, '-T', '--exit-code', 'circular:1', 'src/app.ts');
+  const maindepsfile = projectPath('out/deps/maindeps.json');
+  const webdepsfile = projectPath('out/deps/webdeps.json');
+  await execScript(main, dpdm, '-T', '--progress=false', `--output=${maindepsfile}`, 'src/electronmain.ts');
+  await execScript(web, dpdm, '-T', '--progress=false', `--output=${webdepsfile}`, 'src/app.ts');
+
+  // If these files have a "circular" block then there were circular dependencies
+  const mainerrors = parseJson(maindepsfile, true).circulars;
+  const weberrors = parseJson(webdepsfile, true).circulars;
+  const hasErrors = mainerrors.length > 0 || weberrors.length > 0;
+  if (mainerrors.length > 0) {
+    console.error(`ERROR: ${mainerrors.length} circular dep(s) in main/src: see above (or ${maindepsfile}) for further details.`);
+  }
+  if (weberrors.length > 0) {
+    console.error(`ERROR: ${weberrors.length} circular dep(s) in main/src: see above (or ${webdepsfile}) for further details.`);
+  }
+  if (hasErrors) {
+    process.exit(1);
+  }
 }
 
 // Generates ICO and ICNS files from the art/appicon.png file
