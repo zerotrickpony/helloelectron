@@ -11,11 +11,16 @@ cases the many inter-operation problems are papered over using codegens and/or b
 Although not ideal, this is often the only way to get these tools to work. The resulting
 arrangemnt is fragile, but I hope it gives you a useful starting point.
 
+This is definitely not the only way to set up an Electron project, it's just one way that I
+have done it. My goal is not even to give you the "best" way, just a way that will work because
+I have already stepped in all the bear traps for you.
+
 ## Should I use Electron?
 
 > (If you're already sure you need Electron, skip down to "Getting Started").
 
-Electron is a framework for making **native apps** on Windows, MacOS, and Linux. It's a good choice if:
+Electron is a framework for making **native apps** on Windows, MacOS, and Linux. It's a good choice if
+two or three of these apply to you:
 
 - You know web programming and node.js programming, but not so much Windows or MacOS programming
 - You need to deliver a native app on two or three OS platforms and want to reduce your development
@@ -24,30 +29,34 @@ Electron is a framework for making **native apps** on Windows, MacOS, and Linux.
 - You don't need to deliver a mobile app.
 - The UX you want to show could be expressed as HTML+CSS+JS (This is true for most apps, because
   web pages are ludicrously capable, including WebGL etc, which Electron can do.)
-- You need to deliver a native app on just one platform, and you really don't want to learn native
+- You want to deliver a native app which shares large amounts of code with a web experience. (I don't
+  personally have experience with this, but it's obvious that shops like Discord are doing it. I
+  bet that this would be easier if you don't already have a large website implemented.)
+- Or you need to deliver a native app on just one platform, and you really don't want to learn native
   Windows / native Mac programming (and you do already know web development.)
 
 Consider **not** using Electron if:
 
 - You want to deliver only mobile apps. Consider Fluttr or Instant apps.
-- You want to deliver game-like 3D graphics. Consider Godot or Unreal.
+- You want to deliver game-like 3D graphics. Consider Godot or Unreal, or any of the multitude of
+  for-pay game frameworks out there. You know who I mean. :)
 - You want a "write once" app that deploys to MacOS, iOS, Android, Windows, etc. Consider Godot,
   Fluttr, or just write multiple apps.
 - You don't really need any native-only facilities, such as opening a server socket or accessing
-  the user's local disk carte blanche. If you just need a GUI, consider delivering as a web page,
+  the user's local disk carte blanche. If you just need a GUI, consider delivering as a web page;
   it will be less work and your users will be able to access it more easily.
 - You want to deliver a UX that's tightly integrated with a more exotic part of the native OS,
   such as a system tray icon, a dashboard widget, an accessibility plugin, or a control panel
-  element. Electron doesn't abstract these things so well, so you may need to write native code.
-- Your application requires a cloud service that you are going to maintain. Electron can still
-  participate in that architecture as a native client, but if it's not going to help you avoid
-  building out a cloud service, then you might consider whether you can serve a web GUI off your
-  cloud service and avoid the native client.
-- You want to deliver a very polished native experience on Windows or Mac. Consider building
-  out two separate native apps.
+  element. Electron doesn't abstract these things so well, so you may need to write native code
+  if you want to deliver a very polished native-feeling experience with these aspects. Consider
+  building out two separate native apps.
+- Your application's costs are mostly caused by a cloud service that you are going to build and
+  maintain. Electron can still participate in that architecture as a native client, but if it's
+  not going to help you avoid building out a cloud service, then you might consider whether you
+  can serve a web GUI off your cloud service and avoid the native client.
 - You don't know HTML/CSS nor node.js and don't want to learn
 - You only need to deliver one native app on one platform. Consider simply developing the app
-  natively, it will be easier than suffering the abstractions of Electron. Both Windows and MacOS
+  natively; it will be easier than suffering the abstractions of Electron. Both Windows and MacOS
   native development are very thoroughly documented, better than Electron. (Exception: Unless you
   really know HTML/CSS/Node.js well and are very unwilling to learn the native APIs. See above.)
 
@@ -81,12 +90,12 @@ processes from my Electron app. Gross but reliable.
 There are also a number of parts of Electron that do not abstract multiple OS's at all. You'll find
 things like app updates, installers, and a few other things are just OS-specific implementations
 that you have to manually call by writing `if (process.platform === 'win32') {` type statements
-for. In this regard I feel that Electron is still helpful, but not really complete. Perhaps
+for. In this regard I feel that Electron is still helpful, but certainly not complete. Perhaps
 these things will improve in the future.
 
 Building and packaging in particular is one of those aspects; there's no single builder and there's
 no crossbuild tools for Electron, you just have to debug each platform. I've done some of that
-for you, see below.
+for you, but see "Known issues" below.
 
 # Get Started
 
@@ -313,7 +322,7 @@ P2:
 - NPM packages available in the renderer (TODO)
 - Tests that can run in node
 - A GUI framework that avoids jquery
-- Compiled CSS in TBD CSS abstraction language (SASS?)
+- Compiled CSS in TBD CSS abstraction language like SASS
 - Scaffolding that I find useful to have in graphical Electron apps
 
 ## Challenges
@@ -321,16 +330,16 @@ P2:
 A partial list of problems that this project works around, mostly through wrapper scripts, copying, and symlinking:
 
 - Electron has two different code environments (main and renderer) which don't work together, by design
-- Electron's packagers are half broken on different platforms
+- Electron's default packagers are half broken on different platforms
 - NPM isn't aware of the web/main split in Electron
-- Later versions of electron stymie renderer code loading in a misguided attempt to improve security
-- Off the shelf testing frameworks are not aware of electron's special way of launching
+- Later versions of electron stymie renderer code loading in an incomplete and arguably misguided attempt to improve security
+- Off the shelf testing frameworks are not aware of electron's special way of launching, or of the dual environment
 - CommonJS modules have a kooky import syntax that's incompatible with ESM modules
 - Typescript's support for ESM modules is deliberately broken for node.js
 - Node.js's support for ESM modules deliberately refuses to work with Typescript
-- Chrome has no module loading support at all
+- Chromium has no module loading support at all
 - Typescript won't generate code that inter-operates with in-place source, so all resources must be copied
-- VSCode tries to parse the tsconfig itself, and won't understand nuance from multi-armed build systems or codegens
+- VSCode tries to parse the tsconfig itself, and cannot understand nuance from multi-armed build systems or codegens
 - NPM defaults to auto-updating packages which often breaks them
 - The Squirrel windows installer is of the rather wild opinion that it should have no options or confirmations.
 - The "iconz" tool that I found for generating MacOS ICNS files only actually runs correctly on MacOS hosts
@@ -364,7 +373,8 @@ appease several different conflicting audiences for the Typescript and its compi
   (main, web, test, etc). If not, then you get red squiggles and the interactive type checking
   ("intellisense" ugh) doesn't work. VSCode doesn't support multiple tsconfigs, doesn't
   understand the idea of separated main and render processes, and doesn't understand
-  non-standard build steps like template generated code.
+  non-standard build steps like template generated code. I could have solved this with a custom
+  VSCode plugin, but I preferred an approach that didn't require customizing VSCode.
 
 - For the actual build, Electron's main process should not attempt to compile or typecheck
   code intended for the Chromium renderer. Fortunately, Electron doesn't care about the
@@ -372,11 +382,14 @@ appease several different conflicting audiences for the Typescript and its compi
   stack traces. (And attaching a remote debugger, though I haven't tested that yet.)
 
 - Module resolution in the main process must be compatible with node.js, which doesn't support
-  monolith files or commonJS in Typescript. Chromium doesn't directly support module resolution
-  AT ALL, so module loading must be mitigated via a third party package like requireJs.
+  monolith files or commonJS in Typescript. Meanwhile in the render process, Chromium doesn't
+  directly support module resolution AT ALL, so module loading must be mitigated via a third
+  party package like requireJs. I deliberately chose not to address this with webpack because I
+  wanted something that was more comprehensible and fit to purpose. This isn't the web so I
+  shouldn't need webpack just to paper over the obstinance of Typescript's tooling authors.
 
 - Electron's render process, which is Chromium, supports a single file monolith for compiled
-  JS output, and that simplifies things. Like the above, the compiled result must not attempt
+  JS output, and that avoids webpack. Like the above, the compiled result must not attempt
   to reference node.js APIs because those don't work within the renderer. In the compiled
   monolith there's no need for any relative paths to resolve, except that when debugging the
   app Chromium will attempt to load all the .ts files from the referenced source map. To make
@@ -404,7 +417,8 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 
 - We choose single-file output for all renderer code because it avoids the need for complex
   directory layout. It does NOT do anything particularly for performance because unlike the
-  JS in a web page, all code for Electron is local.
+  JS in a web page, all code for Electron is local. This was not particularly my preference
+  I just did it because it solves a module loading problem.
 
 - We nested the common/ code within the main process src to make import paths work in node.
   I tried other arrangements but found it impossible to appease VSCode without something like
@@ -425,7 +439,7 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   I just have a little stack of spare laptops (Linux, MacOS Intel, MacOS M1, Windows 10) which
   I use to package each version of my app. This will likely never be fixed because the proprietary
   OSes (MacOS and Windows) are actively hostile to receiving packages not created using their
-  proprietary signing tools, which are only available on their hardware.
+  proprietary signing tools, which are purposely only offered on their own OS's / hardware.
 
 ## Security considerations
 
@@ -437,8 +451,10 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
   added by Electron 21+ significantly hobble the usefulness of Electron's renderer, while still not
   fully securing the environment against untrusted code. The only actually secure way to use
   Electron is to not visit internet URLs or download internet resources **at all**.
-  Executing ANY code from the internet is going to carry risk, and it's easier (and makes more sense)
-  to simply run only bundled code. See above.
+  Executing ANY code from the internet is going to carry substantially more risk than running that
+  same code in a browser, because you're always going to be on an older, less patched Chromium version
+  which necessarily has a bunch of holes poked in it to run your node side code. IMO it's easier
+  (and makes more sense) to simply run only bundled code. See above.
 - "Electron Security Warning" shows up in the dev console for unpackaged apps. I think if you want
   to use things like jquery within your render process, this is unavoidable?
 
