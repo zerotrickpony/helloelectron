@@ -1,0 +1,8 @@
+{
+  "name": "helloelectron",
+  "version": "0.0.1",
+  "description": "This package never goes anywhere, its only the tests for electron.",
+  "main": "electronmain.js",
+  "author": "you@you.com",
+  "license": "Apache Creative Commons 2.0"
+}
