@@ -118,4 +118,8 @@ export class Main {
       }
     }
   }
+
+  countCrash() {
+    Main.lifetimeCrashCount++;
+  }
 }

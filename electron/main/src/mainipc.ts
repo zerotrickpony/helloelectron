@@ -1,6 +1,6 @@
 // Implements the IPC commands called from the renderer process.
 import {app, BrowserWindow} from 'electron';
-import {Main} from './electronmain';
+import type {Main} from './electronmain';
 import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData, RecipeRow} from './common/schema';
 import {fork} from './common/commonutil';
 import {readPackagePropertyFile, getHomeDir} from './util/files';
@@ -12,6 +12,7 @@ import {DemoDB} from './demodb';
 
 // The command handler object which handles IPC requests from the Electron renderer.
 export class IpcHandler implements MainIpc {
+  main: Main;
   win: BrowserWindow;
   db: DemoDB;
   systemTestData = new TestData();
@@ -21,6 +22,7 @@ export class IpcHandler implements MainIpc {
 
   constructor(main: Main, opt_systemTestData?: TestData) {
     // TODO this.updater = new SelfUpdater(this);
+    this.main = main;
     this.win = main.win;
     this.browserClient = new IpcClient(this.win);
     this.db = main.db;
@@ -91,7 +93,7 @@ export class IpcHandler implements MainIpc {
 
   // Called when the render process traps a crash
   async logCrash(report: string): Promise<void> {
-    Main.lifetimeCrashCount++;
+    this.main.countCrash();
     console.error(report);
   }
 
