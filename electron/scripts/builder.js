@@ -33,6 +33,10 @@ const COMMANDS = new Map([
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
       buildMain, buildWeb, buildCss, buildTest, checkDeps, runTests]],
+  ['retest', ['Builds the test harness and reruns the given test, and then all tests after it',
+      buildMain, buildWeb, buildCss, buildTest, reTest]],
+  ['testone', ['Builds the test harness and runs one test',
+      buildMain, buildWeb, buildCss, buildTest, runOneTest]],
   ['package', ['Packages a distributable Electron binary for the current platform',
       cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
   ['help', ['Prints this help message',
@@ -442,7 +446,7 @@ function requireValue(v, message) {
 }
 
 // Returns the list of test_blah names within the given directory.
-function findTestNames_(ppath, opt_specificTest) {
+function findTestNames_(ppath, opt_specificTest, opt_retest) {
   const result = [];
   const root = projectPath(ppath);
   for (const tsFile of listDirR(root)) {
@@ -451,7 +455,12 @@ function findTestNames_(ppath, opt_specificTest) {
       result.push(bname.substring(0, bname.length - 3));
     }
   }
-  if (opt_specificTest) {
+  if (opt_specificTest && opt_retest) {
+    // We want this specific test if we have it, plus all tests after it
+    const idx = result.indexOf(opt_specificTest);
+    return idx == -1 ? [] : result.slice(idx);
+  } else if (opt_specificTest) {
+    // Just one test
     if (result.indexOf(opt_specificTest) != -1) {
       return [opt_specificTest];
     }
@@ -461,10 +470,11 @@ function findTestNames_(ppath, opt_specificTest) {
 }
 
 // Runs all the tests.
-async function runTests(opt_specificTest) {
+async function runTests(opt_specificTest, opt_retest) {
   // Find all the tests to run
-  const webTestNames = findTestNames_('test/websrc', opt_specificTest);
-  const mainTestNames = findTestNames_('test/src', opt_specificTest);
+  const mainTestNames = findTestNames_('test/src', opt_specificTest, opt_retest);
+  const wasRetestMain = opt_retest && mainTestNames.length > 0;
+  const webTestNames = findTestNames_('test/websrc', wasRetestMain ? undefined : opt_specificTest, opt_retest);
 
   const testConfig = parseJson(projectPath('test/testconfig.json'), false);
 
@@ -485,10 +495,23 @@ async function runTests(opt_specificTest) {
   } else if (n == 0) {
     console.log(`Error: No tests found`);
     process.exit(1);
-  } else if (n > 1) {
+  } else if (n >= 1) {
     console.log(`ALL TESTS PASSED (${n})`);
   }
   process.exit(0);
+}
+
+// Runs one test
+async function runOneTest(specificTest) {
+  await runTests(specificTest);
+}
+
+// Skips all tests before the given one
+async function reTest(specificTest) {
+  if (!specificTest) {
+    throw new Error('Error: retest requires an argument');
+  }
+  await runTests(specificTest, true);
 }
 
 // Runs one test by writing out testrunnerinfo.json and launching.
