@@ -7,6 +7,9 @@
   "license": "Apache Creative Commons 2.0",
   "updatehost": "https://www.exampledomain.com/helloelectron/dist",
   "previousversion": "0.0.0",
+  "expectnodeversion": "v16.14.0",
+  "expectnpmversion": "8.3.1",
+  "expectpythonversion": "Python 3.9.6",
   "dependencies": {
     "better-sqlite3": "8.0.1",
     "electron-squirrel-startup": "1.0.0",

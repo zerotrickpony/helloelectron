@@ -5,40 +5,38 @@
 // for distribution, look at ./scripts/package.js instead.
 
 import fs from 'fs';
-import {dirname, basename} from 'path';
-import {execScript, execNpm, projectPath, runSteps, symlinkSync, listDirR, readTextFileOr,
-        execScriptAndGetResult, rmProjectFile, parseJson, stripSourceMap, getSHA256,
-        rewriteInPlace} from './_base.js';
+import { basename } from 'path';
+import { execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
-      cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss]],
+      checkVersions, cleanOut, cleanNpm, install, buildMain, buildWeb, buildCss]],
   ['install', ['Just does NPM install',
-      install]],
+      checkVersions, install]],
   ['clean', ['Erases all build output',
       cleanOut]],
   ['veryclean', ['Erases all build output and NPM packages',
       cleanOut, cleanNpm]],
   ['build', ['Builds the electron project for development mode',
-      buildMain, buildWeb, buildCss]],
+      setLock, buildMain, buildWeb, buildCss]],
   ['web', ['Builds just the render process Typescript and CSS',
-      buildWeb, buildCss]],
+      setLock, buildWeb, buildCss]],
   ['css', ['Builds just the CSS',
-      buildCss]],
+      setLock, buildCss]],
   ['icons', ['Generates the icon files the packaged Electron app',
-      buildIcons]],
+      setLock, buildIcons]],
   ['run', ['Builds and runs the Electron app in development mode',
-      buildMain, buildWeb, buildCss, runDev]],
+      setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
   ['checkdeps', ['Checks for circular dependencies in the typescript.',
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
-      buildMain, buildWeb, buildCss, buildTest, checkDeps, runTests]],
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, runTests]],
   ['retest', ['Builds the test harness and reruns the given test, and then all tests after it',
-      buildMain, buildWeb, buildCss, buildTest, reTest]],
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, reTest]],
   ['testone', ['Builds the test harness and runs one test',
-      buildMain, buildWeb, buildCss, buildTest, runOneTest]],
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, runOneTest]],
   ['package', ['Packages a distributable Electron binary for the current platform',
-      cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
+      setLock, cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -54,10 +52,15 @@ const EXPLAIN = new Map([
   [buildCss, 'Builds the CSS into compiled.css'],
   [runDev, 'Quickly launches the Electron app in development mode (pre-packaged)'],
   [checkDeps, 'Checks the codebase for circular module dependencies'],
+  [checkVersions, 'Checks the tool versions of Python, Node, and NPM'],
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
   [buildTest, 'Builds all typescript for main and test, including test code'],
   [runTests, 'Runs every test_blah.ts file and stops if any of them fail'],
+  [runOneTest, 'Runs the given test_blah.ts file'],
+  [reTest, 'Re-runs the test suite starting from the given test, instead of from the beginning'],
+  [setLock, 'Creates a lockfile to prevent other builds from running concurrently.'],
+  [removeLock, 'Removes the build lockfile.'],
   [printHelp, 'Shows a brief description of each command'],
   [printExplain, 'Shows this help message'],
 ]);
@@ -121,10 +124,15 @@ async function install() {
 
 // Builds the main process code
 async function buildMain() {
-  // Build the main process Typescript
   const main = projectPath('main');
-  const tsc = projectPath('main/node_modules/.bin/tsc');
-  await execScript(main, tsc, '--project', 'main_tsconfig.json');
+  const touchfile = projectPath('out/tscdone_main.touch');
+
+  if (!checkTscDone(touchfile, 'main/main_tsconfig.json')) {
+    // Build the main process Typescript
+    const tsc = projectPath('main/node_modules/.bin/tsc');
+    await execScript(main, tsc, '--project', 'main_tsconfig.json');
+    fs.writeFileSync(touchfile, 'tsc run for component: main');
+  }
 
   // The source map for electronpreload.ts can never work because it's unservable
   stripSourceMap(projectPath('out/build/electronpreload.js'));
@@ -136,10 +144,15 @@ async function buildMain() {
 }
 
 async function buildWeb() {
-  // Build the render process Typescript
   const web = projectPath('web');
-  const tsc = projectPath('web/node_modules/.bin/tsc');
-  await execScript(web, tsc, '--project', 'web_tsconfig.json');
+  const touchfile = projectPath('out/tscdone_web.touch');
+
+  if (!checkTscDone(touchfile, 'web/web_tsconfig.json')) {
+    // Build the render process Typescript
+    const tsc = projectPath('web/node_modules/.bin/tsc');
+    await execScript(web, tsc, '--project', 'web_tsconfig.json');
+    fs.writeFileSync(touchfile, 'tsc run for component: web');
+  }
 
   // Forward static resources and typescript source
   fs.mkdirSync(projectPath('out/build/web/web'), {recursive: true});
@@ -157,6 +170,20 @@ async function buildWeb() {
 
   // This will be mutated by the test script so we make a copy of it
   fs.cpSync(projectPath('web/lib/boot/electronmain.html'), projectPath('out/build/web/electronmain.html'));
+}
+
+// Returns true if the touchfile is newer than all of the TS files and config files.
+function checkTscDone(touchfile, tsconfig) {
+  const touchtime = getHighestMtime(touchfile);
+  if (!touchtime) {
+    return false;  // no sentinel file, so tsc is definitely needed
+  }
+  const srctime = getHighestTSCMtime(tsconfig);
+  if (!srctime) {
+    console.log(`WARNING: No sources parsed from tsc check, performing normal build`);
+    return false;  // no sources parsed
+  }
+  return (srctime < touchtime);
 }
 
 async function buildCss() {
@@ -178,11 +205,73 @@ async function buildCss() {
   fs.writeFileSync(projectPath('out/build/web/compiled.css'), lines.join('\n'));
 }
 
-async function runDev() {
+// Waits for any live pid to finish, and then writes a pid lockfile for the current builder.
+async function setLock() {
+  let didMessage = false;
+  const lockpath = 'out/pid.lockfile';
+  let lock = parseProjectJson(lockpath);
+  while (lock && lock.pid) {
+    try {
+      // Another build may be running, wait for it if it's still live
+      process.kill(lock.pid, 0);
+    } catch (e) {
+      // The pid does not exist, clear the lockfile
+      rmProjectFile(lockpath);
+      break;
+    }
+
+    // It's still alive, try waiting for it and then go again
+    if (!didMessage) {
+      console.log(`Waiting for concurrent build to finish...`);
+      didMessage = true;
+    }
+    await sleep(500);
+    lock = parseProjectJson(lockpath);
+  }
+
+  // Set our own lockfile
+  fs.writeFileSync(projectPath(lockpath), JSON.stringify({pid: process.pid}));
+}
+
+function removeLock() {
+  rmProjectFile('out/pid.lockfile');
+}
+
+async function runDev(...args) {
   // Launch the development mode tool
   const p = projectPath('out/build');
   const electron = projectPath('out/build/node_modules/.bin/electron');
-  await execScript(p, electron, '.');
+  await execScript(p, electron, '.', ...args);
+}
+
+async function checkVersions() {
+  const main = projectPath('main');
+  const packageInfo = parseJson(projectPath('main/package.json'), true);
+  const {expectnpmversion, expectpythonversion, expectnodeversion} = packageInfo;
+
+  if (expectnodeversion) {
+    const nodeVersion = (await execScriptAndGetResult(main, 'node', '--version')).toString().trim();
+    if (nodeVersion != expectnodeversion) {
+      console.error(`ERROR: package.json expectnodeversion specifies ${expectnodeversion}, but found ${nodeVersion}`);
+      process.exit(1);
+    }
+  }
+
+  if (expectnpmversion) {
+    const npmVersion = (await execNpmAndGetResult(main, '--version')).toString().trim();
+    if (npmVersion != expectnpmversion) {
+      console.error(`ERROR: package.json expectnpmversion specifies ${expectnpmversion}, but found ${npmVersion}`);
+      process.exit(1);
+    }
+  }
+
+  if (expectpythonversion) {
+    const pythonVersion = (await execScriptAndGetResult(main, 'python3', '--version')).toString().trim();
+    if (pythonVersion != expectpythonversion) {
+      console.error(`ERROR: package.json expectpythonversion specifies ${expectpythonversion}, but found ${pythonVersion}`);
+      process.exit(1);
+    }
+  }
 }
 
 async function checkDeps() {
@@ -266,7 +355,7 @@ async function packageElectron() {
   const packageInfo = parseJson(projectPath('main/package.json'), true);
   const {name, version, updatehost} = packageInfo;
   const {arch, platform} = process;
-  const updateUrl = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`
+  const updateUrl = `${updatehost}/${name}-${platform}-${arch}-updateinfo-${version}.json`;
   requireValue(name, 'Missing name property in main/package.json');
   requireValue(version, 'Missing version property in main/package.json');
   requireValue(updatehost, 'Missing updatehost property in main/package.json');
@@ -368,6 +457,8 @@ async function stageWin32(packageInfo) {
 
 // Builds the main process code with the testing harness installed
 async function buildTest() {
+  // NOTE: tsc could probably be short-circuited but since we modify the source in place
+  // it makes it complicated to detect and re-run the right parts of the test build.
   // Replace the compiled typescript with our versions
   const test = projectPath('test');
   const tsc = projectPath('main/node_modules/.bin/tsc');
@@ -525,9 +616,9 @@ async function runTest_(testName, isWeb, testConfig) {
   const info = {testName, isWeb};
   fs.writeFileSync(projectPath('out/build/testrunnerinfo.json'), JSON.stringify(info));
 
-  const {wantTestData, argv} = parseTestConfig_(testConfig, testName);
-  if (wantTestData) {
-    fs.cpSync(projectPath('test/data'), projectPath('out/build/test/data'), {recursive: true});
+  const {testDataPairs, argv} = parseTestConfig_(testConfig, testName);
+  for (const [fromPath, toPath] of testDataPairs) {
+    fs.cpSync(projectPath(fromPath), projectPath(toPath), {recursive: true, force: true});
   }
 
   // Launch; if this doesn't exit with zero status then we'll fail it
@@ -549,9 +640,9 @@ async function runTest_(testName, isWeb, testConfig) {
   }
 }
 
-// Returns {wantTestData, argv} for the test with the given name
+// Returns {testDataPairs, argv} for the test with the given name
 function parseTestConfig_(testConfig, testName) {
-  let wantTestData = false;
+  let testDataPairs = undefined;
   let argv = [];
   const matchesRule = (rule) => {
     if (rule.test && rule.test === testName) {
@@ -564,7 +655,18 @@ function parseTestConfig_(testConfig, testName) {
   for (const rule of testConfig) {
     if (matchesRule(rule)) {
       if (rule.testdata !== undefined) {
-        wantTestData = !!rule.testdata;
+        testDataPairs = [];
+        if (!Array.isArray(rule.testdata)) {
+          console.error(`Bad testdata parameter in testconfig.json, expected array of pairs but got: ${JSON.stringify(rule.testdata)}`);
+          throw new Error('STOP_BUILD');
+        }
+        for (const pair of rule.testdata) {
+          if (!Array.isArray(pair) || pair.length != 2) {
+            console.error(`Bad testdata parameter in testconfig.json, expected pair item but got: ${JSON.stringify(pair)}`);
+            throw new Error('STOP_BUILD');
+          }
+          testDataPairs.push(pair);
+        }
       }
       if (rule.argv) {
         argv = rule.argv;
@@ -575,7 +677,7 @@ function parseTestConfig_(testConfig, testName) {
       }
     }
   }
-  return {wantTestData, argv};
+  return {testDataPairs, argv};
 }
 
 function printHelp() {

@@ -1,7 +1,7 @@
 [
   {
     "tests": "test_.*",
-    "testdata": true
+    "testdata": [["test/data", "out/build/test/data"]]
   },
   {
     "test": "test_webexample",

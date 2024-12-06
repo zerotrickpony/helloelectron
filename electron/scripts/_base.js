@@ -53,6 +53,15 @@ export async function execNpm(cwd, ...args) {
   }
 }
 
+// Runs NPM with the given args in the given directory.
+export async function execNpmAndGetResult(cwd, ...args) {
+  if (process.platform == 'win32') {
+    return await execScriptAndGetResult(cwd, 'cmd.exe', '/c', 'npm', ...args);
+  } else {
+    return await execScriptAndGetResult(cwd, 'npm', ...args);
+  }
+}
+
 // Runs a command from the given directory.
 export async function execScript(cwd, ...commandAndArgs) {
   const p = new Promise((resolve, reject) => {
@@ -168,6 +177,69 @@ export function rmProjectFile(p) {
   }
 }
 
+// Returns the latest mtime in milliseconds from the given list of paths, or 0 if no files were readable.
+export function getHighestMtime(...paths) {
+  let highestMs = 0;
+  for (const path of paths) {
+    highestMs = compareMtime(highestMs, path);
+  }
+  return highestMs;
+}
+
+// Returns the given highest mtime, or the mtime of the given path if it exists, whichever is higher.
+function compareMtime(highestMs, path) {
+  try {
+    const s = fs.statSync(path);
+    if (s && !isNaN(s.mtimeMs) && highestMs < s.mtimeMs) {
+       return s.mtimeMs;
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return highestMs;
+}
+
+// Parses the given tsconfig and and stats all included sources. Returns the highest mtime from those.
+export function getHighestTSCMtime(tsconfigProjectPath) {
+  const tsconfigfile = projectPath(tsconfigProjectPath);
+  const json = parseJson(tsconfigfile);
+  const cwd = dirname(tsconfigfile);
+  const patterns = json.include.map(pattern => new WildcardMatcher(cwd, pattern));
+  if (!patterns.length) {
+    return 0;  // hmm!
+  }
+
+  const isFileMatch = (filename) => {
+    for (const w of patterns) {
+      if (w.isMatch(filename)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  let highestMs = compareMtime(0, tsconfigfile);
+
+  const rscan = p => {
+    for (let f of fs.readdirSync(p, {withFileTypes: true})) {
+      const bname = f.name;
+      const filename = `${p}/${bname}`;
+      if (f.isDirectory()) {
+        rscan(filename);
+      } else if (isFileMatch(filename)) {
+        highestMs = compareMtime(highestMs, filename);
+      }
+    }
+  };
+
+  // Scan each of the roots
+  const roots = patterns.map(w => w.getRootDir());
+  for (const root of roots) {
+    rscan(root);
+  }
+  return highestMs;
+}
+
 // Returns the contents of the given file as JSON, or null if not found. Still throws on parse error.
 export function parseJson(filename, opt_fail) {
   let data;
@@ -188,6 +260,11 @@ export function parseJson(filename, opt_fail) {
     console.error(`Could not parse ${filename}`);
     throw new Error('STOP_BUILD');
   }
+}
+
+// Same as above, but works with a project path instead of an arbitrary file path.
+export function parseProjectJson(path, opt_fail) {
+  return parseJson(projectPath(path), opt_fail);
 }
 
 // Erases all occurrences of "sourceMappingURL" from a text file.
@@ -213,4 +290,65 @@ export function readTextFileOr(filename) {
 // Computes the SHA256 of the given file
 export function getSHA256(filename) {
   return createHash('sha256').update(fs.readFileSync(filename)).digest("hex").toLowerCase();
+}
+
+// Async function that sleeps for the given number of ms.
+export async function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+// Returns the given string but escaped for use as a search literal within a regexp
+export function escaperegexp(text) {
+  return text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+class WildcardMatcher {
+  constructor(cwd, pattern) {
+    // Absolute-path-ified version of the pattern
+    this.path = join(cwd, pattern);
+    this.pattern = this.toRegexp(this.path);
+  }
+
+  toRegexp(absPattern) {
+    let result = '^';
+    let pos = 0;
+    let nextpos = absPattern.indexOf('*', pos);
+    while (nextpos != -1) {
+      const s = absPattern.substring(pos, nextpos);
+      const remainder = absPattern.substring(nextpos);
+      result += escaperegexp(s);
+      if (remainder.startsWith('**/')) {
+        result += '(.+\/)?';
+        pos = nextpos + 3;
+      } else if (remainder.startsWith('**')) {
+        result += '.*';
+        pos = nextpos + 2;
+      } else if (remainder.startsWith('*')) {
+        result += '[^/]+';
+        pos = nextpos + 1;
+      }
+      nextpos = absPattern.indexOf('*', pos);
+    }
+    result += absPattern.substring(pos);
+    return new RegExp(result + '$');
+  }
+
+  // Returns the common parent directory of this wildcard.
+  getRootDir() {
+    let result = '';
+    for (const part of this.path.split('/')) {
+      if (part.indexOf('*') != -1) {
+        return result;  // stop at the beginning of the wildcards
+      } else if (part != '') {
+        result += '/' + part;
+      }
+    }
+    return result;
+  }
+
+  isMatch(absPath) {
+    return this.pattern.test(absPath);
+  }
 }
