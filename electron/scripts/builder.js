@@ -230,6 +230,7 @@ async function setLock() {
   }
 
   // Set our own lockfile
+  fs.mkdirSync(projectPath('out'), {recursive: true});
   fs.writeFileSync(projectPath(lockpath), JSON.stringify({pid: process.pid}));
 }
 
