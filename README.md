@@ -326,7 +326,7 @@ P2:
 - NPM packages available in the renderer (TODO)
 - Tests that can run in node
 - A GUI framework that avoids jquery
-- Compiled CSS in TBD CSS abstraction language like SASS
+- Compiled CSS from a nicer language (I chose SASS which is pretty good)
 - Scaffolding that I find useful to have in graphical Electron apps
 
 ## Challenges
@@ -334,7 +334,7 @@ P2:
 A partial list of problems that this project works around, mostly through wrapper scripts, copying, and symlinking:
 
 - Electron has two different code environments (main and renderer) which don't work together, by design
-- Electron's default packagers are half broken on different platforms
+- Electron has no default packager, and the two community provided packagers (forge or builder) are half broken on different platforms
 - NPM isn't aware of the web/main split in Electron
 - Later versions of electron stymie renderer code loading in an incomplete and arguably misguided attempt to improve security
 - Off the shelf testing frameworks are not aware of electron's special way of launching, or of the dual environment
@@ -347,6 +347,8 @@ A partial list of problems that this project works around, mostly through wrappe
 - NPM defaults to auto-updating packages which often breaks them
 - The Squirrel windows installer is of the rather wild opinion that it should have no options or confirmations.
 - The "iconz" tool that I found for generating MacOS ICNS files only actually runs correctly on MacOS hosts
+- MacOS code signing and notarization are complex, and the forge-provided tools that are supposed to handle
+  them are toys which break instantly when they face a real application
 - The self-updating systems available for Electron are VERY over-complicated. Some of them demand needless
   client-side complexity, and some of them refuse to work without running a live server with a Reddis cluster
   (lol) and other Things That Are Not Simply A Static File. For this demo I have trimmed down what's needed.
