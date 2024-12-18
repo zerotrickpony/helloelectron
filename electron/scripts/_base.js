@@ -3,6 +3,7 @@
 import {spawn} from 'child_process';
 import {join, dirname} from 'path';
 import fs from 'fs';
+import {homedir} from 'os';
 import events from 'events';
 import readline from 'readline';
 import {fileURLToPath} from 'url';
@@ -21,6 +22,11 @@ export function projectPath(path, opt_within) {
     subpath += '/' + opt_within;
   }
   return join(__dirname, subpath);
+}
+
+// Returns the absolute path of a file in the user's home directory.
+export function homePath(path) {
+  return join(homedir(), path);
 }
 
 export async function cleanOutput() {
@@ -187,7 +193,7 @@ export function getHighestMtime(...paths) {
 }
 
 // Returns the given highest mtime, or the mtime of the given path if it exists, whichever is higher.
-function compareMtime(highestMs, path) {
+export function compareMtime(highestMs, path) {
   try {
     const s = fs.statSync(path);
     if (s && !isNaN(s.mtimeMs) && highestMs < s.mtimeMs) {
@@ -267,6 +273,16 @@ export function parseProjectJson(path, opt_fail) {
   return parseJson(projectPath(path), opt_fail);
 }
 
+// Returns the full file path of the secrets file.
+export function secretsPath() {
+  return homePath('.helloelectron-secrets.json');
+}
+
+// Parses a JSON file of secrets in the home directory.
+export function parseSecrets() {
+  return parseJson(secretsPath(), true);
+}
+
 // Erases all occurrences of "sourceMappingURL" from a text file.
 export function stripSourceMap(path) {
   rewriteInPlace(path, /sourceMappingURL/g, '');
@@ -302,6 +318,54 @@ export async function sleep(ms) {
 // Returns the given string but escaped for use as a search literal within a regexp
 export function escaperegexp(text) {
   return text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+// sigh
+export function escapeHtml(string) {
+  var str = '' + string
+  var match = /["'&<>]/.exec(str)
+
+  if (!match) {
+    return str
+  }
+
+  var escape
+  var html = ''
+  var index = 0
+  var lastIndex = 0
+
+  for (index = match.index; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      case 34: // "
+        escape = '&quot;'
+        break
+      case 38: // &
+        escape = '&amp;'
+        break
+      case 39: // '
+        escape = '&#39;'
+        break
+      case 60: // <
+        escape = '&lt;'
+        break
+      case 62: // >
+        escape = '&gt;'
+        break
+      default:
+        continue
+    }
+
+    if (lastIndex !== index) {
+      html += str.substring(lastIndex, index)
+    }
+
+    lastIndex = index + 1
+    html += escape
+  }
+
+  return lastIndex !== index
+    ? html + str.substring(lastIndex, index)
+    : html
 }
 
 class WildcardMatcher {

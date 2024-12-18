@@ -1,0 +1,13 @@
+{
+  "comment": "This is a list of the project-relative paths that will be passed to codesign. The --deep option is supposed to detect these, but it doesn't!",
+  "signTargets": [
+    "out/dist/helloelectron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libEGL.dylib",
+    "out/dist/helloelectron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libGLESv2.dylib",
+    "out/dist/helloelectron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libffmpeg.dylib",
+    "out/dist/helloelectron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib",
+    "out/dist/helloelectron.app/Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt",
+    "out/dist/helloelectron.app/Contents/Resources/app/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+    "out/dist/helloelectron.app/Contents/Resources/app/node_modules/better-sqlite3/build/Release/test_extension.node",
+    "out/dist/helloelectron.app"
+  ]
+}

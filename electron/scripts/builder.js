@@ -6,7 +6,7 @@
 
 import fs from 'fs';
 import { basename } from 'path';
-import { execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
+import { compareMtime, execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, secretsPath, sleep, stripSourceMap, symlinkSync } from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -37,6 +37,8 @@ const COMMANDS = new Map([
       setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, runOneTest]],
   ['package', ['Packages a distributable Electron binary for the current platform',
       setLock, cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
+  ['notarize', ['(MacOS only) runs notarytool and creates signatures. Only do this right after package',
+      notarizeDarwin]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -61,6 +63,7 @@ const EXPLAIN = new Map([
   [reTest, 'Re-runs the test suite starting from the given test, instead of from the beginning'],
   [setLock, 'Creates a lockfile to prevent other builds from running concurrently.'],
   [removeLock, 'Removes the build lockfile.'],
+  [notarizeDarwin, '(MacOS only) runs notarytool on the packaged app'],
   [printHelp, 'Shows a brief description of each command'],
   [printExplain, 'Shows this help message'],
 ]);
@@ -320,27 +323,28 @@ async function buildIcons() {
 async function packageElectron() {
   fs.cpSync(projectPath('out/build'), projectPath('out/package'), {dereference: false, recursive: true});
 
-  // Replace the lib symlinks with real copies so we can manipulate them
+  // Replace the lib symlinks with real copies, because we'll need to manipulate them and
+  // because the packagers don't like symlinks
   rmProjectFile('out/package/lib');
   rmProjectFile('out/package/package.json');
   rmProjectFile('out/package/web/lib/js');
   rmProjectFile('out/package/web/lib/images');
+  rmProjectFile('out/package/node_modules');
+  rmProjectFile('out/package/web/appicon.png');
+  rmProjectFile('out/package/web/src');
+  rmProjectFile('out/package/web/web/src');
+  rmProjectFile('out/package/web/main/src/common');
 
   // Place the real files
   fs.cpSync(projectPath('main/package.json'), projectPath('out/package/package.json'));
   fs.cpSync(projectPath('main/lib'), projectPath('out/package/lib'), {dereference: true, recursive: true});
   fs.cpSync(projectPath('web/lib/js'), projectPath('out/package/web/lib/js'), {dereference: true, recursive: true});
   fs.cpSync(projectPath('web/lib/images'), projectPath('out/package/web/lib/images'), {dereference: true, recursive: true});
-
-  if (process.platform == 'linux') {
-    // The DEB packager doesn't like symlinks so we need to copy over everything
-    rmProjectFile('out/package/node_modules');
-    rmProjectFile('out/package/web/appicon.png');
-    rmProjectFile('out/package/web/src');
-    fs.cpSync(projectPath('main/node_modules'), projectPath('out/package/node_modules'), {dereference: false, recursive: true});
-    fs.cpSync(projectPath('art/appicon.png'), projectPath('out/package/web/appicon.png'));
-    fs.cpSync(projectPath('web/src'), projectPath('out/package/web/src'), {dereference: false, recursive: true});
-  }
+  fs.cpSync(projectPath('main/node_modules'), projectPath('out/package/node_modules'), {dereference: false, recursive: true});
+  fs.cpSync(projectPath('art/appicon.png'), projectPath('out/package/web/appicon.png'));
+  fs.cpSync(projectPath('web/src'), projectPath('out/package/web/src'), {dereference: false, recursive: true});
+  fs.cpSync(projectPath('main/src/common'), projectPath('out/package/web/main/src/common'), {dereference: false, recursive: true});
+  fs.cpSync(projectPath('web/src'), projectPath('out/package/web/web/src'), {dereference: false, recursive: true});
 
   // Erase platform-specific assets for the other platforms
   for (const otherPlatform of ['darwin', 'win32', 'linux']) {
@@ -369,9 +373,6 @@ async function packageElectron() {
   fs.cpSync(projectPath(`main/${platform}_forge.config.js`), projectPath('out/package/forge.config.js'));
   await execScript(projectPath('out/package'), projectPath('out/package/node_modules/.bin/electron-forge'), 'make');
 
-  // Fix NPM afterwards, since Forge prunes away dev dependencies
-  await install();
-
   // Stage all the output
   fs.mkdirSync(projectPath('out/dist'), {recursive: true});
   if (process.platform === 'darwin') {
@@ -383,28 +384,70 @@ async function packageElectron() {
   }
 }
 
-// Emits the updateinfo.json file and stages the zip. Put these on a web server to make the app update itself.
+// Simply unzips the foo.app package.
 async function stageDarwin(packageInfo) {
-  const {name, version, previousversion, updatehost} = packageInfo;
+  const {name, version} = packageInfo;
   const {arch, platform} = process;
-  requireValue(previousversion, 'Missing previousversion property in main/package.json');
 
-  // Stage the zip
+  // Extract the app, since a zip file of unsigned code is useless for distribution anyway
   const zipname = `${name}-${platform}-${arch}-${version}.zip`;
-  const zipfile = projectPath(`out/dist/${zipname}`);
-  fs.renameSync(projectPath(`out/package/out/make/zip/${platform}/${arch}/${zipname}`), zipfile);
+  const zipsrc = projectPath(`out/package/out/make/zip/${platform}/${arch}/${zipname}`);
+  await execScript(projectPath('out/dist'), 'unzip', zipsrc);
+  fs.rmSync(zipsrc);
+  console.log(`Packaged: open ${projectPath(`out/dist/${name}.app`)}`);
+}
 
-  const sha256 = getSHA256(zipfile);
+// Emits the updateinfo.json file and signs and notarizes the zip. Put these on a web server to make the app update itself.
+async function notarizeDarwin() {
+  const packageInfo = parseJson(projectPath('main/package.json'), true);
+  const {name, version, updatehost, previousversion} = packageInfo;
+  const {arch, platform} = process;
+  const {notarytoolPassword, appleDeveloperId, appleTeamId, appleSignature} = parseSecrets();
+  const {signTargets} = parseProjectJson('main/lib/darwin/signing.json', true);
+
+  requireValue(previousversion, 'Missing previousversion property in main/package.json');
+  requireValue(notarytoolPassword, `Missing notarytoolPassword property in ${secretsPath()}`);
+  requireValue(appleDeveloperId, `Missing appleDeveloperId property in ${secretsPath()}`);
+  requireValue(appleTeamId, `Missing appleTeamId property in ${secretsPath()}`);
+  requireValue(appleSignature, `Missing appleSignature property in ${secretsPath()}`);
+
+  // Sign
+  let signCount = 0;
+  const entitlementsFile = projectPath('main/lib/darwin/entitlements.plist');
+  for (const path of signTargets) {
+    if (compareMtime(0, projectPath(path)) > 0) {
+      signCount++;
+      await execScript(projectPath('out/dist'), 'codesign', '--sign', appleSignature,
+          '--deep', '--force', '--timestamp', '--options', 'runtime', '--entitlements', entitlementsFile, projectPath(path));
+    }
+  }
+  if (signCount < 1) {
+    console.error(`Error: No signing targets exist from main/lib/darwin/signing.json`);
+    throw new Error('STOP_BUILD');
+  }
+
+  // notarytool requires a single zip submission
+  const zipname = `${name}-${platform}-${arch}-${version}.zip`;
+  await execScript(projectPath('out/dist'), 'zip', '-y', '-r', zipname, `${name}.app`);
+
+  // Upload the zip to Apple and wait for the result
+  await execScript(projectPath('out/dist'), 'xcrun', 'notarytool', 'submit', '--apple-id', appleDeveloperId, '--team-id',
+      appleTeamId, '--password', notarytoolPassword, '--wait', '-v', projectPath(`out/dist/${zipname}`));
+  await execScript(projectPath('out/dist'), 'xcrun', 'stapler', 'staple', `${name}.app`);
+
+  // Recreate the zip now that the app is stapled.
+  rmProjectFile(`out/dist/${zipname}`);
+  await execScript(projectPath('out/dist'), 'zip', '-y', '-r', zipname, `${name}.app`);
+
+  // Create the updateinfo JSON
+  const sha256 = getSHA256(projectPath(`out/dist/${zipname}`));
   const url = `${updatehost}/${zipname}`;
-
   const updateJsonFile = projectPath(`out/dist/${name}-${platform}-${arch}-updateinfo-${previousversion}.json`);
   fs.writeFileSync(updateJsonFile, JSON.stringify({url, sha256, release: ''}, null, 2));
 
   // Also stage the MacOS app for local execution
-  await execScript(projectPath('out/dist'), 'unzip', zipfile);
   console.log(`Update info prepared, roll out updates by publishing:`);
-  console.log(`Local: open ${projectPath(`out/dist/${name}.app`)}`);
-  console.log('ZIP  : ' + zipfile);
+  console.log('ZIP  : ' + projectPath(`out/dist/${zipname}`));
   console.log('JSON : ' + updateJsonFile);
   console.log('Host : ' + updatehost);
 }

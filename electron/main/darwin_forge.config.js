@@ -4,7 +4,6 @@ module.exports = {
   packagerConfig: {
     executableName: 'helloelectron',
     icon: 'web/appicon',
-    osxSign: {},
   },
   rebuildConfig: {},
   makers: [
