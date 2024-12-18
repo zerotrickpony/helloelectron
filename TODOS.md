@@ -1,0 +1,48 @@
+## TODOs
+
+- ✅ get ts working in main process in a basic way
+- ✅ try compiled.js and see if source map works in renderer
+- ✅ make a "just the web" compilation script
+- ✅ try using "sass" for CSS compilation: https://sass-lang.com/guide/#example-variables-scss
+- ✅ ErrorReport class
+- ✅ Type safe command dispatch using some sort of IDL or common interface
+- ✅ try packaging
+- ✅ port the scripts to node.js
+- ✅ strip out the source map from electronpreload.js to get rid of the error message
+- ✅ write out updateinfo.json as part of packaging
+- ✅ Logger facility
+- ✅ rename HtmlBuilder to something more pithy like DBox or DomBox or DivBox or NodeBox.
+- ✅ try using a native dependency like better-sqlite3, and add the electron rebuild statement to the script
+- ✅ get tests working
+  - ✅ compile a version of the app with the test code in it
+  - ✅ make sure that code in test can refer to prod code
+  - ✅ rewrite require statements and reparent the test code
+  - ✅ fix up paths in the source map files for the test code
+  - ✅ generate hooks that register all the tests (does module code run? maybe i could generate includes)
+  - ✅ launch and make sure it sort of works
+  - ✅ testing harness that sets up the code each time
+  - ✅ bring in test/websrc source for debugger
+  - ✅ run just one test, pick from the command line
+  - ✅ open dev console on test failure
+  - ✅ test/data redeployments
+  - ✅ just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
+  - ✅ consider any crash anywhere in the app to also be a test failure.
+  - need to put a test/node_modules and a test/package.json in there
+- ✅ updater scheme / OTA update support
+- test/ needs to be split up from testweb/, they cant share a single node_modules.
+- add dpdm and run it during tests
+- bug: restart app button in crash reporter doesnt work
+- try npm install non-dev web dependencies, what happens to them?
+- add toasts to the GUI, and toast on update
+- add wrapper scripts for "npm install --save"
+- test updater on mac
+- test packaging: Linux
+  - linux packager has wrong path, it should refer to the .deb not the zip
+- test packaging: Win
+  - add Windows signing instructions and setup
+  - test updater
+- test packaging: Mac x64
+- notarization for macos
+- the default behavior of the app shows an ugly printout, this is not a good demo.
+- demonstrate mixing in raw JS?
+- backport all my web test matchers into this example

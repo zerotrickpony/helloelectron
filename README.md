@@ -177,11 +177,15 @@ example as a library, or make it easy to take new versions of this example in th
   - **On MacOS**: `open ./electron/out/dist/appname.app` (you can copy this to /Applications as-is)
   - **On Windows**: `./electron/out/dist/appname-0.0.1\ Setup.exe`
 
-3. Distribute the app bundles created in `electron/out/dist`, which are like:
+3. You can distribute development versions of your app bundles from `electron/out/dist`, which are like:
   - **On MacOS**: `electron/out/dist/appname-darwin-arm64-0.0.1.zip`
   - **On Linux**: `electron/out/dist/appname-linux-x64-0.0.1.deb`
   - **On Windows**: `electron/out/dist/appname-win32-x64-0.0.1-installer.zip`
 
+> **Important:** On MacOS and Windows 10+, the instructions above will produce **unsigned binaries** which
+> **will be blocked** by the OS if you take them to another computer. A knowledgable developer can work around the
+> blocks, but it won't be reasonable to expect a layman user to receive an unsigned binary. If you want to solve
+> this, read [signing-macos.md](./signing-macos.md) and/or [signing-windows.md](signing-windows.md) respectively.
 
 ### Remote updates for your app
 
@@ -472,53 +476,3 @@ found in the "blah_testconfig.json" files located with their sub-directories. A 
 - Forge manipulates NPM during its build process, so an npm install is necessary to
   recover from the packager's behavior. This means we depend on NPM's servers for packaging.
 - The scripts directory has to have a package.json file to appease node.js for modules.
-
-
-## TODOs
-
-- ✅ get ts working in main process in a basic way
-- ✅ try compiled.js and see if source map works in renderer
-- ✅ make a "just the web" compilation script
-- ✅ try using "sass" for CSS compilation: https://sass-lang.com/guide/#example-variables-scss
-- ✅ ErrorReport class
-- ✅ Type safe command dispatch using some sort of IDL or common interface
-- ✅ try packaging
-- ✅ port the scripts to node.js
-- ✅ strip out the source map from electronpreload.js to get rid of the error message
-- ✅ write out updateinfo.json as part of packaging
-- ✅ Logger facility
-- ✅ rename HtmlBuilder to something more pithy like DBox or DomBox or DivBox or NodeBox.
-- ✅ try using a native dependency like better-sqlite3, and add the electron rebuild statement to the script
-- ✅ get tests working
-  - ✅ compile a version of the app with the test code in it
-  - ✅ make sure that code in test can refer to prod code
-  - ✅ rewrite require statements and reparent the test code
-  - ✅ fix up paths in the source map files for the test code
-  - ✅ generate hooks that register all the tests (does module code run? maybe i could generate includes)
-  - ✅ launch and make sure it sort of works
-  - ✅ testing harness that sets up the code each time
-  - ✅ bring in test/websrc source for debugger
-  - ✅ run just one test, pick from the command line
-  - ✅ open dev console on test failure
-  - ✅ test/data redeployments
-  - ✅ just pass actual argv to the process during the test, dont use fakeArgv? testsetup.json
-  - ✅ consider any crash anywhere in the app to also be a test failure.
-  - need to put a test/node_modules and a test/package.json in there
-- ✅ updater scheme / OTA update support
-- test/ needs to be split up from testweb/, they cant share a single node_modules.
-- add dpdm and run it during tests
-- bug: restart app button in crash reporter doesnt work
-- try npm install non-dev web dependencies, what happens to them?
-- add toasts to the GUI, and toast on update
-- add wrapper scripts for "npm install --save"
-- test updater on mac
-- test packaging: Linux
-  - linux packager has wrong path, it should refer to the .deb not the zip
-- test packaging: Win
-  - add Windows signing instructions and setup
-  - test updater
-- test packaging: Mac x64
-- notarization for macos
-- the default behavior of the app shows an ugly printout, this is not a good demo.
-- demonstrate mixing in raw JS?
-- backport all my web test matchers into this example
