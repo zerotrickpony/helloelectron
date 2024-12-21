@@ -422,7 +422,7 @@ async function notarizeDarwin() {
     }
   }
   if (signCount < 1) {
-    console.error(`Error: No signing targets exist from main/lib/darwin/signing.json`);
+    console.error(`Error: No signing targets exist, did you forget to package? (targets listed in main/lib/darwin/signing.json)`);
     throw new Error('STOP_BUILD');
   }
 
