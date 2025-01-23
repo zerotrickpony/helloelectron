@@ -70,56 +70,21 @@ export async function execNpmAndGetResult(cwd, ...args) {
 
 // Runs a command from the given directory.
 export async function execScript(cwd, ...commandAndArgs) {
-  const p = new Promise((resolve, reject) => {
-    const command = commandAndArgs[0];
-    const ext = process.platform == 'win32' && command.indexOf('node_modules\\.bin') ? '.cmd' : '';
-    const args = commandAndArgs.slice(1);
-    const options = {cwd};
-    const p = spawn(`${command}${ext}`, args, options);
-    p.stdout.on('data', (data) => {
-      process.stdout.write(data);
-    });
-    p.stderr.on('data', (data) => {
-      process.stderr.write(data);
-    });
-    p.on('close', (code) => {
-      resolve({code});
-    });
-    p.on('error', (error) => reject({error}));
+  await spawnScript(cwd, commandAndArgs, p => {
+    p.stdout.pipe(process.stdout);
+    p.stderr.pipe(process.stderr);
   });
-
-  const {code} = await p;
-  if (code != 0) {
-    console.error(`Failed (${code}): ${commandAndArgs.join(' ')}`);
-    throw new Error('STOP_BUILD');
-  }
 }
 
 // Same as above, but returns stdout instead of streaming it to
 export async function execScriptAndGetResult(cwd, ...commandAndArgs) {
   const buffers = [];
-  const p = new Promise((resolve, reject) => {
-    const command = commandAndArgs[0];
-    const args = commandAndArgs.slice(1);
-    const options = {cwd};
-    const p = spawn(command, args, options);
+  await spawnScript(cwd, commandAndArgs, p => {
+    p.stderr.pipe(process.stderr);
     p.stdout.on('data', (data) => {
       buffers.push(data);
     });
-    p.stderr.on('data', (data) => {
-      process.stderr.write(data);
-    });
-    p.on('close', (code) => {
-      resolve({code});
-    });
-    p.on('error', (error) => reject({error}));
   });
-
-  const {code} = await p;
-  if (code != 0) {
-    console.error(`Failed (${code}): ${commandAndArgs.join(' ')}`);
-    throw new Error('STOP_BUILD');
-  }
   return Buffer.concat(buffers);
 }
 
@@ -229,7 +194,7 @@ export function getHighestTSCMtime(tsconfigProjectPath) {
   const rscan = p => {
     for (let f of fs.readdirSync(p, {withFileTypes: true})) {
       const bname = f.name;
-      const filename = `${p}/${bname}`;
+      const filename = join(p, bname);
       if (f.isDirectory()) {
         rscan(filename);
       } else if (isFileMatch(filename)) {
@@ -368,14 +333,18 @@ export function escapeHtml(string) {
     : html
 }
 
-class WildcardMatcher {
+// Matches paths to a shell style wildcard like "foo/*.ts" or "foo/**/*.txt".
+export class WildcardMatcher {
   constructor(cwd, pattern) {
     // Absolute-path-ified version of the pattern
+    this.isWin = process.platform == 'win32';
     this.path = join(cwd, pattern);
     this.pattern = this.toRegexp(this.path);
   }
 
+  // Converts a shell pattern like C:\foo\**\*.ts into a regex like /C:\\foo\\(.*)...etc
   toRegexp(absPattern) {
+    const isWin = this.isWin;
     let result = '^';
     let pos = 0;
     let nextpos = absPattern.indexOf('*', pos);
@@ -383,36 +352,158 @@ class WildcardMatcher {
       const s = absPattern.substring(pos, nextpos);
       const remainder = absPattern.substring(nextpos);
       result += escaperegexp(s);
-      if (remainder.startsWith('**/')) {
+      if (!isWin && remainder.startsWith('**/')) {
         result += '(.+\/)?';
+        pos = nextpos + 3;
+      } else if (isWin && remainder.startsWith('**\\')) {
+        result += '(.+\\\\)?';
         pos = nextpos + 3;
       } else if (remainder.startsWith('**')) {
         result += '.*';
         pos = nextpos + 2;
       } else if (remainder.startsWith('*')) {
-        result += '[^/]+';
+        result += !isWin ? '[^/]+' : '[^\\\\]+';
         pos = nextpos + 1;
       }
       nextpos = absPattern.indexOf('*', pos);
     }
-    result += absPattern.substring(pos);
+    result += escaperegexp(absPattern.substring(pos));
     return new RegExp(result + '$');
   }
 
-  // Returns the common parent directory of this wildcard.
+  // Trims off the wildcard portion of the path.
   getRootDir() {
-    let result = '';
-    for (const part of this.path.split('/')) {
-      if (part.indexOf('*') != -1) {
-        return result;  // stop at the beginning of the wildcards
-      } else if (part != '') {
-        result += '/' + part;
-      }
-    }
-    return result;
+    const path = this.path;
+    const starpos = path.indexOf('*');
+    const lpath = starpos != -1 ? path.substring(0, starpos) : path;
+    const slashpos = lpath.lastIndexOf(this.isWin ? '\\' : '/');
+    return slashpos != -1 ? lpath.substring(0, slashpos) : lpath;
   }
 
   isMatch(absPath) {
     return this.pattern.test(absPath);
+  }
+}
+
+// Spawns the given command, runs the given setup function, and fails with STOP_BUILD if the command isn't successful.
+async function spawnScript(cwd, commandAndArgs, setupFn) {
+  const command = commandAndArgs[0];
+  const args = commandAndArgs.slice(1);
+  const ext = (process.platform == 'win32' && command.indexOf('node_modules\\.bin') != -1) ? '.cmd' : '';
+  const options = {cwd};
+  const s = new Spawner(`${command}${ext}`, args, options);
+  s.start(setupFn);
+
+  const code = await s.getResult();
+  if (code != 0) {
+    console.error(`Failed (${code}): ${commandAndArgs.join(' ')}`);
+    throw new Error('STOP_BUILD');
+  }
+}
+
+// This is a copy-paste of main/util/Spawner.
+export class Spawner {
+  constructor(command, args, opt_options) {
+    this.command = command;  // string
+    this.args = args;  // string[]
+    this.options = opt_options;  // {}
+
+    // Waiters
+    this.exitPromiseResolves = [];
+    this.exitPromiseRejects = [];
+
+    // Results
+    this.childProcess = undefined;
+    this.code = undefined;
+    this.err = undefined;
+  }
+
+  // Starts spawn(), registers handlers, and optionally lets the caller do more process setup via a callback. Never throws.
+  start(opt_setupFn) {
+    try {
+      this.childProcess = spawn(this.command, this.args, this.options);
+      this.childProcess.on('error', err => this.onError_(err));
+      this.childProcess.on('close', code => this.onClose_(code));
+      if (opt_setupFn) {
+        opt_setupFn(this.childProcess);
+      }
+    } catch (e) {
+      this.onError_(e);
+    }
+    return this.childProcess;
+  }
+
+  // Returns the child process, or throws whatever error occurred at this point.
+  getProcess() {
+    if (this.err !== undefined) {
+      throw this.err;
+    } else if (!this.childProcess) {
+      throw new Error(`Could not spawn process: ${this.command}`);
+    }
+    return this.childProcess;
+  }
+
+  // Returns a promise that resolves when the process has exited. Throws an Error on any problem. In order to
+  // handle this correctly you must DIRECTLY await this call. The event handler must not run before your await.
+  async getResult() {
+    return new Promise((resolve, reject) => {
+      if (this.err !== undefined) {
+        reject(this.err);  // already gave an error
+      } else if (this.code !== undefined) {
+        resolve(this.code);  // already done
+      } else {
+        // No result yet, wait for it
+        this.exitPromiseResolves.push(resolve);
+        this.exitPromiseRejects.push(reject);
+      }
+    });
+  }
+
+  // Same as above except if the process has any non-zero exit, an Error is thrown with the given message.
+  async expectExit0(errorMessage) {
+    const code = await this.getResult();
+    if (code !== 0) {
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Called when there is an error. Any promises pending or made in the future WILL reject.
+  onError_(err) {
+    this.err = err;
+
+    // Notify any waiters, and clears the lists so we don't notify anyone twice.
+    const rejects = this.exitPromiseRejects;
+    this.exitPromiseResolves = [];
+    this.exitPromiseRejects = [];
+    for (const rej of rejects) {
+      try {
+        rej(err);
+      } catch (e) {
+        console.error(`Unexpected error while delivering reject`);
+      }
+    }
+  }
+
+  // Called when the process ends or if there is an error.
+  onClose_(code) {
+    this.code = code;
+
+    if (this.err !== undefined) {
+      // We already rejected the promise, so we can store the code but we won't send it to anyone.
+      return;
+    }
+
+    // Also notify any waiters, and clears the lists so we don't notify anyone twice.
+    const resolves = this.exitPromiseResolves;
+    this.exitPromiseResolves = [];
+    this.exitPromiseRejects = [];
+
+    for (const res of resolves) {
+      try {
+        res(code);
+      } catch (e) {
+        console.error(`Unexpected error while delivering resolve`);
+      }
+    }
   }
 }

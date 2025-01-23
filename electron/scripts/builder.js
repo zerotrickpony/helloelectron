@@ -5,8 +5,8 @@
 // for distribution, look at ./scripts/package.js instead.
 
 import fs from 'fs';
-import { basename } from 'path';
-import { compareMtime, execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, secretsPath, sleep, stripSourceMap, symlinkSync } from './_base.js';
+import { basename, dirname } from 'path';
+import { compareMtime, execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -19,10 +19,6 @@ const COMMANDS = new Map([
       cleanOut, cleanNpm]],
   ['build', ['Builds the electron project for development mode',
       setLock, buildMain, buildWeb, buildCss]],
-  ['web', ['Builds just the render process Typescript and CSS',
-      setLock, buildWeb, buildCss]],
-  ['css', ['Builds just the CSS',
-      setLock, buildCss]],
   ['icons', ['Generates the icon files the packaged Electron app',
       setLock, buildIcons]],
   ['run', ['Builds and runs the Electron app in development mode',
@@ -31,33 +27,55 @@ const COMMANDS = new Map([
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
       setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, runTests]],
-  ['retest', ['Builds the test harness and reruns the given test, and then all tests after it',
-      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, reTest]],
-  ['testone', ['Builds the test harness and runs one test',
-      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, runOneTest]],
+  ['help', ['Prints this help message',
+      printHelp]],
+  ['explain', ['Prints the detailed steps that each command performs',
+      printExplain]],
+
+  // Packaging / release / distribution stuff
   ['package', ['Packages a distributable Electron binary for the current platform',
       setLock, cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
   ['notarize', ['(MacOS only) runs notarytool and creates signatures. Only do this right after package',
       notarizeDarwin]],
-  ['help', ['Prints this help message',
-      printHelp]],
-  ['explain', ['Prints the detailed steps that each command performs',
-      printExplain]]
+  ['notarizex64', ['(MacOS only) runs notarytool on a supplied x64 app expected in out/dist',
+      notarizeDarwinX64]],
+  ['packagesource', ['Packages buildable source tarball for Linux',
+      cleanOut, packageSrc]],
+
+  // Partial commands for incremental build; these are faster but don't ensure a consistent build.
+  ['buildmain', ['Builds the electron project for development mode',
+      setLock, buildMain, buildWeb, buildCss]],
+  ['web', ['Builds just the render process Typescript and CSS',
+      setLock, buildWeb, buildCss]],
+  ['css', ['Builds just the CSS',
+      setLock, buildCss]],
+  ['justrun', ['Runs the electron app without building it.',
+      runDev]],
+  ['buildtest', ['Builds just the test code, assuming the rest of the project is already built',
+      setLock, buildTest]],
+  ['justtest', ['Runs the test harness again without rebuilding it.',
+      runTests]],
+  ['testone', ['Builds the test harness and runs one test',
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, runOneTest]],
+  ['retest', ['Builds the test harness and reruns the given test, and then all tests after it',
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, reTest]],
+  ['justtestone', ['Builds the test harness and runs one test',
+      runOneTest]],
 ]);
 
 const EXPLAIN = new Map([
   [cleanOut, 'Erases all build and package output'],
   [cleanNpm, 'Erases all node_modules so they can be npm installed again'],
+  [checkVersions, 'Checks the tool versions of Python, Node, and NPM'],
   [install, 'Performs NPM install on both main and render process sub-modules'],
   [buildMain, 'Build typescript and electron dependencies for the main process'],
   [buildWeb, 'Builds typescript into compiled.js and electron dependencies for the render process'],
   [buildCss, 'Builds the CSS into compiled.css'],
   [runDev, 'Quickly launches the Electron app in development mode (pre-packaged)'],
-  [checkDeps, 'Checks the codebase for circular module dependencies'],
-  [checkVersions, 'Checks the tool versions of Python, Node, and NPM'],
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
   [buildTest, 'Builds all typescript for main and test, including test code'],
+  [checkDeps, 'Checks the codebase for circular module dependencies'],
   [runTests, 'Runs every test_blah.ts file and stops if any of them fail'],
   [runOneTest, 'Runs the given test_blah.ts file'],
   [reTest, 'Re-runs the test suite starting from the given test, instead of from the beginning'],
@@ -162,7 +180,11 @@ async function buildWeb() {
   fs.mkdirSync(projectPath('out/build/web/main/src'), {recursive: true});
   fs.mkdirSync(projectPath('out/build/web/lib'), {recursive: true});
 
-  symlinkSync(projectPath('art/appicon.png'), projectPath('out/build/web/appicon.png'));
+  if (process.platform !== 'win32') {
+    symlinkSync(projectPath('art/appicon.png'), projectPath('out/build/web/appicon.png'));
+  } else {
+    fs.cpSync(projectPath('art/appicon.png'), projectPath('out/build/web/appicon.png'));  // windows refuses to read symlink icons
+  }
   symlinkSync(projectPath('web/lib/js'), projectPath('out/build/web/lib/js'));
   symlinkSync(projectPath('web/lib/images'), projectPath('out/build/web/lib/images'));
   symlinkSync(projectPath('web/src'), projectPath('out/build/web/web/src'));
@@ -346,13 +368,25 @@ async function packageElectron() {
   fs.cpSync(projectPath('main/src/common'), projectPath('out/package/web/main/src/common'), {dereference: false, recursive: true});
   fs.cpSync(projectPath('web/src'), projectPath('out/package/web/web/src'), {dereference: false, recursive: true});
 
-  // Erase platform-specific assets for the other platforms
+  // Place a copy of the node-side source, this isn't used its just for reference
+  fs.mkdirSync(projectPath('out/package/main-src'), {recursive: true});
+  fs.cpSync(projectPath('main/src'), projectPath('out/package/main-src'), {dereference: false, recursive: true});
+
+  // Erase platform-specific and arch-specific assets if they're not relevant to the current package
   for (const otherPlatform of ['darwin', 'win32', 'linux']) {
     if (otherPlatform != process.platform) {
       rmProjectFile(`out/package/lib/${otherPlatform}`);
       rmProjectFile(`out/package/web/lib/${otherPlatform}`);
       rmProjectFile(`out/package/web/lib/js/${otherPlatform}`);
       rmProjectFile(`out/package/web/lib/images/${otherPlatform}`);
+    }
+  }
+  for (const otherArch of ['x64', 'arm64']) {
+    if (otherArch != process.arch) {
+      rmProjectFile(`out/package/lib/${process.platform}/${otherArch}`);
+      rmProjectFile(`out/package/web/lib/${process.platform}/${otherArch}`);
+      rmProjectFile(`out/package/web/lib/js/${process.platform}/${otherArch}`);
+      rmProjectFile(`out/package/web/lib/images/${process.platform}/${otherArch}`);
     }
   }
 
@@ -398,10 +432,10 @@ async function stageDarwin(packageInfo) {
 }
 
 // Emits the updateinfo.json file and signs and notarizes the zip. Put these on a web server to make the app update itself.
-async function notarizeDarwin() {
+async function notarizeDarwin(opt_platforminfo) {
   const packageInfo = parseJson(projectPath('main/package.json'), true);
   const {name, version, updatehost, previousversion} = packageInfo;
-  const {arch, platform} = process;
+  const {arch, platform} = opt_platforminfo ? opt_platforminfo : process;
   const {notarytoolPassword, appleDeveloperId, appleTeamId, appleSignature} = parseSecrets();
   const {signTargets} = parseProjectJson('main/lib/darwin/signing.json', true);
 
@@ -452,6 +486,10 @@ async function notarizeDarwin() {
   console.log('Host : ' + updatehost);
 }
 
+async function notarizeDarwinX64() {
+  await notarizeDarwin({arch: 'x64', platform: 'darwin'});
+}
+
 // Emits the .deb file. Auto-update is not supported on Linux so no JSON stuff.
 async function stageLinux(packageInfo) {
   const {name, version} = packageInfo;
@@ -463,9 +501,6 @@ async function stageLinux(packageInfo) {
 
 // Same as above but with the extra nupkg scheme stuff
 async function stageWin32(packageInfo) {
-
-  // TODO - this isn't quite right, test and fix
-
   const {name, version, previousversion, updatehost} = packageInfo;
   const {arch, platform} = process;
   requireValue(previousversion, 'Missing previousversion property in main/package.json');
@@ -491,12 +526,83 @@ async function stageWin32(packageInfo) {
 
   const updateJsonFile = projectPath(`out/dist/${name}-win32-x64-updateinfo-${previousversion}.json`);
   fs.writeFileSync(updateJsonFile, JSON.stringify({url, sha256, release}, null, 2));
-  console.log(`Run Winstaller locally with: ${projectPath(`out/make/squirrel.windows/${arch}/${appname}-${appversion} Setup.exe`)}`);
+  console.log(`Run Winstaller locally with: ${setupfile}`);
   console.log(`Update info prepared, roll out updates by publishing these:`);
   console.log(`Install ZIP: ${projectPath(`out/dist/${zipfile}`)}`);
   console.log('Update JSON: ' + updateJsonFile);
   console.log('Update NPKG: ' + projectPath(`out/dist/${nupkg}`));
   console.log('Host URL   : ' + updatehost);
+}
+
+// Creates a tarball of a subset of the source code, enough to build on an unseen linux platform.
+async function packageSrc() {
+  const packageInfo = parseJson(projectPath('main/package.json'), true);
+  const {name, version} = packageInfo;
+  requireValue(name, 'Missing name property in main/package.json');
+  requireValue(version, 'Missing version property in main/package.json');
+
+  const out = `out/package/srctar/${name}`;
+  const platform = 'linux';
+  const arch = 'x64';
+
+  const SRC_LIST = [
+    'scripts/_base.js',
+    'scripts/builder.js',
+    'scripts/package.json',
+    'art/appicon.png',
+    'art/appicon.ico',
+    'main/lib',
+    'main/src',
+    'main/package.json',
+    'main/package-lock.json',
+    'main/linux_forge.config.js',
+    'main/main_tsconfig.json',
+    'test/package.json',
+    'web/css',
+    'web/lib',
+    'web/src',
+    'web/package.json',
+    'web/package-lock.json',
+    'web/web_tsconfig.json',
+  ];
+
+  // Place the source code itself, not build products
+  fs.mkdirSync(projectPath(`${out}`), {recursive: true});
+  for (const item of SRC_LIST) {
+    const targetPath = `${out}/${item}`;
+    fs.mkdirSync(dirname(projectPath(targetPath)), {recursive: true});
+    fs.cpSync(projectPath(item), projectPath(targetPath), {dereference: true, recursive: true});
+  }
+
+  // Erase platform-specific and arch-specific assets not relevant to linux x64
+  for (const otherPlatform of ['darwin', 'win32', 'linux']) {
+    if (otherPlatform != platform) {
+      rmProjectFile(`${out}/main/lib/${otherPlatform}`);
+      rmProjectFile(`${out}/web/lib/${otherPlatform}`);
+      rmProjectFile(`${out}/web/lib/js/${otherPlatform}`);
+      rmProjectFile(`${out}/web/lib/images/${otherPlatform}`);
+    }
+  }
+  for (const otherArch of ['x64', 'arm64']) {
+    if (otherArch != arch) {
+      rmProjectFile(`${out}/main/lib/${platform}/${otherArch}`);
+      rmProjectFile(`${out}/web/lib/${platform}/${otherArch}`);
+      rmProjectFile(`${out}/web/lib/js/${platform}/${otherArch}`);
+      rmProjectFile(`${out}/web/lib/images/${platform}/${otherArch}`);
+    }
+  }
+
+  // Place some build scripts and instructions
+  fs.cpSync(projectPath('scripts/linux_srctar_build.sh'), projectPath(`${out}/build.sh`));
+  fs.cpSync(projectPath('scripts/linux_srctar_run.sh'), projectPath(`${out}/run.sh`));
+  fs.cpSync(projectPath('scripts/linux_srctar_README'), projectPath(`${out}/README`));
+
+  // Make a tarball
+  const tarname = `${name}-src-${platform}-${arch}-${version}.tgz`;
+  fs.mkdirSync(projectPath('out/dist'), {recursive: true});
+  await execScript(projectPath('out/package/srctar'), 'tar', '-zcvf', projectPath(`out/dist/${tarname}`), `./${name}`);
+
+  console.log('Source tarball: ' + projectPath(`out/dist/${tarname}`));
 }
 
 // Builds the main process code with the testing harness installed

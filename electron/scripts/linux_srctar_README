@@ -1,0 +1,26 @@
+# Hello Electron
+
+TODO - replace this with a description of your app's instructions
+
+## Requirements
+
+To build this source tarball into a working binary, you will need:
+- An amd64 machine
+- Some linux distribution, doesn't have to be Ubuntu
+- [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
+- [pyenv](https://github.com/pyenv/pyenv?tab=readme-ov-file#installation)
+- About 200MB of free disk space
+- A network connection (for npm install to download its many dependencies)
+
+## Build and run a source tarball for linux
+
+1. Download the `helloelectron-src.tgz` file
+2. `cd /tmp`
+3. `tar -zxvf /tmp/helloelectron-src.tgz`
+4. `cd ./helloelectron`
+5. `nvm install v16.14.0`
+6. `nvm use v16.14.0`
+7. `pyenv install -s 3.9.6`
+8. `pyenv local 3.9.6`
+9. `./build.sh`
+10. `./run.sh`
