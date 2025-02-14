@@ -21,10 +21,10 @@ export class App {
     const recipes = await this.ipc.getRecipes();
     $('BODY').append('<div id=main />');
     $('#main').text(`
-      Platform info:
-      ${JSON.stringify(info, null, 2)}
+      \nPlatform info:
+      \n${JSON.stringify(info, null, 2)}
 
-      Recipes:
-      ${JSON.stringify(recipes, null, 2)}`);
+      \nRecipes:
+      \n${JSON.stringify(recipes, null, 2)}`);
   }
 }
