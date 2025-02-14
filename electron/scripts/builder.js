@@ -1,12 +1,13 @@
 #!/bin/node
 
 // This script builds the project to a locally runnable state. Typescript errors are
-// emitted, and it sets up symlinks for in-place local running. To package the app
-// for distribution, look at ./scripts/package.js instead.
+// emitted, and it sets up symlinks for in-place local running. Multi-commands provided
+// for packaging and testing. See README.md and the help output.
+
 
 import fs from 'fs';
 import { basename, dirname } from 'path';
-import { compareMtime, execNpm, execNpmAndGetResult, execScript, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
+import { compareMtime, execNpm, execNpmAndGetResult, execScript, projectPathExists, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -22,7 +23,7 @@ const COMMANDS = new Map([
   ['icons', ['Generates the icon files the packaged Electron app',
       setLock, buildIcons]],
   ['run', ['Builds and runs the Electron app in development mode',
-      setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
+      cleanIfTest, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
   ['checkdeps', ['Checks for circular dependencies in the typescript.',
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
@@ -41,6 +42,12 @@ const COMMANDS = new Map([
       notarizeDarwinX64]],
   ['packagesource', ['Packages buildable source tarball for Linux',
       cleanOut, packageSrc]],
+
+  // Combo helpers
+  ['cleanbuild', ['Same as "clean" and then "build"',
+      cleanOut, setLock, buildMain, buildWeb, buildCss]],
+  ['cleanrun', ['Same as "clean" and then "run"',
+      cleanOut, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
 
   // Partial commands for incremental build; these are faster but don't ensure a consistent build.
   ['buildmain', ['Builds the electron project for development mode',
@@ -126,6 +133,13 @@ async function cleanNpm() {
   fs.rmSync(projectPath('main/node_modules'), {recursive: true, force: true});
   fs.rmSync(projectPath('web/node_modules'), {recursive: true, force: true});
   fs.rmSync(projectPath('test/node_modules'), {recursive: true, force: true});
+}
+
+// Checks if the output folder was last used by the test build, and cleans if so
+async function cleanIfTest() {
+  if (projectPathExists('out/build/test')) {
+    await cleanOut();
+  }
 }
 
 // NPM install

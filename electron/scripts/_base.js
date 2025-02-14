@@ -211,6 +211,17 @@ export function getHighestTSCMtime(tsconfigProjectPath) {
   return highestMs;
 }
 
+// Returns true if the given project path exists at all.
+export function projectPathExists(relpath) {
+  try {
+    const s = fs.statSync(projectPath(relpath));
+    return !!s;
+  } catch (e) {
+    // Ignore
+  }
+  return false;
+}
+
 // Returns the contents of the given file as JSON, or null if not found. Still throws on parse error.
 export function parseJson(filename, opt_fail) {
   let data;
