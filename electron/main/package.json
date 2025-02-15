@@ -23,13 +23,17 @@
     "@electron-forge/maker-rpm": "6.0.3",
     "@electron-forge/maker-squirrel": "6.0.3",
     "@electron-forge/maker-zip": "6.0.3",
+    "@eslint/js": "9.20.0",
     "@types/better-sqlite3": "7.6.9",
-    "@types/source-map-support": "0.5.10",
     "@types/electron-squirrel-startup": "1.0.0",
     "@types/node-fetch": "2.6.7",
+    "@types/source-map-support": "0.5.10",
     "electron": "20.3.5",
+    "eslint": "8.56.0",
+    "globals": "15.15.0",
     "png-to-ico": "2.1.8",
     "sass": "1.74.1",
-    "typescript": "5.3.3"
+    "typescript": "5.3.3",
+    "typescript-eslint": "7.0.0"
   }
 }

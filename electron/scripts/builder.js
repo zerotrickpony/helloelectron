@@ -22,12 +22,14 @@ const COMMANDS = new Map([
       setLock, buildMain, buildWeb, buildCss]],
   ['icons', ['Generates the icon files the packaged Electron app',
       setLock, buildIcons]],
+  ['lint', ['Runs eslint on the codebase',
+      setLock, buildMain, buildWeb, buildCss, lint, lintTest, removeLock]],
   ['run', ['Builds and runs the Electron app in development mode',
       cleanIfTest, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
   ['checkdeps', ['Checks for circular dependencies in the typescript.',
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
-      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, runTests]],
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, lint, lintTest, runTests]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -242,6 +244,23 @@ async function buildCss() {
     }
   }
   fs.writeFileSync(projectPath('out/build/web/compiled.css'), lines.join('\n'));
+}
+
+// Runs eslint on the main and web packages.
+async function lint() {
+  const main = projectPath('main');
+  const eslint = projectPath('main/node_modules/.bin/eslint');
+  await execScript(main, eslint, '--no-eslintrc', '-c', './main_eslint.config.cjs', '**/*.ts');
+  await execScript(main, eslint, '--no-eslintrc', '-c', './web_eslint.config.cjs', '../web/src/**/*.ts');
+}
+
+// Runs eslint on the testmain and testweb packages.
+async function lintTest() {
+  const main = projectPath('main');
+  const eslint = projectPath('main/node_modules/.bin/eslint');
+
+  await execScript(main, eslint, '--no-eslintrc', '-c', './testmain_eslint.config.cjs', '../test/src/**/*.ts');
+  await execScript(main, eslint, '--no-eslintrc', '-c', './testweb_eslint.config.cjs', '../test/websrc/**/*.ts');
 }
 
 // Waits for any live pid to finish, and then writes a pid lockfile for the current builder.
