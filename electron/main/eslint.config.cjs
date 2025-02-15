@@ -8,9 +8,6 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
   root: true,
-  parserOptions: {
-    project: '../test/testweb_tsconfig.json'
-  },
   rules: {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-confusing-void-expression': 'off',

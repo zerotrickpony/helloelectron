@@ -23,13 +23,13 @@ const COMMANDS = new Map([
   ['icons', ['Generates the icon files the packaged Electron app',
       setLock, buildIcons]],
   ['lint', ['Runs eslint on the codebase',
-      setLock, buildMain, buildWeb, buildCss, lint, lintTest, removeLock]],
+      setLock, buildMain, buildWeb, buildCss, lint, removeLock]],
   ['run', ['Builds and runs the Electron app in development mode',
       cleanIfTest, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
   ['checkdeps', ['Checks for circular dependencies in the typescript.',
       checkDeps]],
   ['test', ['Builds the test harness and runs each test',
-      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, lint, lintTest, runTests]],
+      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, lint, runTests]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -246,21 +246,19 @@ async function buildCss() {
   fs.writeFileSync(projectPath('out/build/web/compiled.css'), lines.join('\n'));
 }
 
-// Runs eslint on the main and web packages.
+// Runs eslint on all packages.
 async function lint() {
-  const main = projectPath('main');
-  const eslint = projectPath('main/node_modules/.bin/eslint');
-  await execScript(main, eslint, '--no-eslintrc', '-c', './main_eslint.config.cjs', '**/*.ts');
-  await execScript(main, eslint, '--no-eslintrc', '-c', './web_eslint.config.cjs', '../web/src/**/*.ts');
+  await execESLint('main/main_tsconfig.json', '**/*.ts');
+  await execESLint('web/web_tsconfig.json', '../web/src/**/*.ts');
+  await execESLint('test/testmain_tsconfig.json', '../test/src/**/*.ts');
+  await execESLint('test/testweb_tsconfig.json', '../test/websrc/**/*.ts');
 }
 
-// Runs eslint on the testmain and testweb packages.
-async function lintTest() {
+async function execESLint(tsconfigProjectPath, globFromMain) {
   const main = projectPath('main');
   const eslint = projectPath('main/node_modules/.bin/eslint');
-
-  await execScript(main, eslint, '--no-eslintrc', '-c', './testmain_eslint.config.cjs', '../test/src/**/*.ts');
-  await execScript(main, eslint, '--no-eslintrc', '-c', './testweb_eslint.config.cjs', '../test/websrc/**/*.ts');
+  await execScript(main, eslint, '--no-eslintrc', '-c', './eslint.config.cjs',
+      '--parser-options', `project:"${projectPath(tsconfigProjectPath)}"`, globFromMain);
 }
 
 // Waits for any live pid to finish, and then writes a pid lockfile for the current builder.
