@@ -47,4 +47,4 @@ export interface RecipeRow {
   id: number,
   name: string,
   text: string
-};
+}

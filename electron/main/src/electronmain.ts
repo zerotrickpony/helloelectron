@@ -14,10 +14,11 @@ import nodepath from 'path';
 import {fileURLToPath} from 'url';
 import {DemoDB} from './demodb';
 
-import {app, BrowserWindow, ipcMain, protocol} from 'electron';
-import {IpcHandler} from './mainipc';
-import {TestData} from './common/schema';
-import {Logger} from './logger';
+import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { IpcHandler } from './mainipc';
+import { TestData } from './common/schema';
+import { Logger} from './logger';
+import { eat } from './common/commonutil';
 
 type Request = Electron.ProtocolRequest;
 type Response = Electron.ProtocolResponse | string;
@@ -29,14 +30,14 @@ export const SYSTEMTESTDATA = new TestData();  // this filled in for testing
 
 // Configure electron
 app.setName('Hello');
-app.whenReady().then(() => new Main());
+app.whenReady().then(() => new Main());  // eslint-disable-line
 
 // The main electron app.
 export class Main {
-  static INSTANCE: Main;
+  static INSTANCE?: Main;
   static lifetimeCrashCount = 0;
 
-  win: BrowserWindow;
+  win?: BrowserWindow;
   ipc: IpcHandler;
   db: DemoDB;
 
@@ -49,7 +50,7 @@ export class Main {
     // Register protocols and app hooks
     protocol.registerFileProtocol('electronresource', (req, fn) => this.serveResource(req, fn));
     ipcMain.handle('command', async (e, req) => await this.ipc.handleMainIpc(req));
-    process.on('unhandledRejection', (e: Error, p) => this.handleFatalError(e));
+    process.on('unhandledRejection', (e: Error) => this.handleFatalError(e));
     process.on('uncaughtException', (e) => this.handleFatalError(e));
     app.on('before-quit', e => this.ipc.handleQuitEvent(e));
     Logger.GLOBAL_LOG_HANDLER = m => this.logToIpc(m);
@@ -77,7 +78,7 @@ export class Main {
     Main.lifetimeCrashCount++;
     console.error(e);
     if (this.win) {
-      const error = e && e.stack ? e.stack : `${e}`;
+      const error = e?.stack ? e.stack : `${e}`;  // eslint-disable-line
       this.ipc.browserClient.handleFatalError(error);
     }
   }
@@ -92,13 +93,13 @@ export class Main {
 
     win.setBackgroundColor('#000');
     win.maximize();
-    win.loadFile('web/electronmain.html');
+    eat(win.loadFile('web/electronmain.html'));
     return win;
   }
 
   private logToIpc(message: string) {
       console.log(message);
-      if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {
+      if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {  // eslint-disable-line
         this.ipc.browserClient.handleLog(message, undefined);
       }
   }
@@ -110,8 +111,8 @@ export class Main {
     if (error) {
       console.error(error);
     }
-    if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {
-      if (error && error.stack) {
+    if (this.win && this.ipc && !this.ipc.win.isDestroyed()) {  // eslint-disable-line
+      if (error?.stack) {
         this.ipc.browserClient.handleLog(message, error.stack);
       } else {
         this.ipc.browserClient.handleLog(message, undefined);

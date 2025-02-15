@@ -43,25 +43,25 @@ export class DomBox {
   }
 
   // Sets the innerText of the element at the cursor.
-  text(text: string): DomBox {
+  text(text: string): this {
     this.cursor.innerText = text;
     return this;
   }
 
   // Sets the innerHTML of the element at the cursor.
-  html(html: string): DomBox {
+  html(html: string): this {
     this.cursor.innerHTML = html;
     return this;
   }
 
   // Installs a click handler, replacing other click handlers.
-  click(fn: (e: MouseEvent) => Promise<any>): DomBox {
+  click(fn: (e: MouseEvent) => Promise<any>): this {
     this.cursor.onclick = fn;
     return this;
   }
 
   // Adds an event listener for the given event type.
-  on(eventType: string, fn: (e: Event) => Promise<any>): DomBox {
+  on(eventType: string, fn: (e: Event) => any): this {
     this.cursor.addEventListener(eventType, fn);
     return this;
   }
@@ -73,7 +73,7 @@ export class DomBox {
   }
 
   // Shows an element that was previously hidden with hide()
-  show(showCondition = true): DomBox {
+  show(showCondition = true): this {
     if (showCondition) {
       this.cursor.classList.remove('hidden-element');
     } else {
@@ -83,7 +83,7 @@ export class DomBox {
   }
 
   // Styles the element away using the CSS class "hidden-element"
-  hide(): DomBox {
+  hide(): this {
     this.cursor.classList.add('hidden-element');
     return this;
   }
@@ -99,7 +99,7 @@ export class DomBox {
     if (parent) {
       return new DomBox(parent);
     } else {
-      throw new Error(`No parent at this node: ${this.cursor}`);
+      throw new Error(`No parent at this node`);
     }
   }
 

@@ -5,6 +5,6 @@ import { App } from './app';
 
 $(document).ready(() => {
   const w = window as any;
-  w['theapp'] = new App();
-  w['theapp'].run();
+  w.theapp = new App();
+  w.theapp.run();
 });

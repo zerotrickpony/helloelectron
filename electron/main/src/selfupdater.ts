@@ -7,12 +7,17 @@ import fetch from 'node-fetch';
 import {autoUpdater, app} from 'electron';
 import http from 'http';
 import {BrowserIpc} from './common/schema';
+import { delay } from './common/commonutil';
 
 // This is the JSON we read from the file
-type UpdateInfo = {url: string, sha256: string, release?: string};
+interface UpdateInfo {
+  url: string;
+  sha256: string;
+  release?: string;
+}
 
 type HTTPRequest = http.IncomingMessage;
-type HTTPResponse = http.ServerResponse<http.IncomingMessage>;
+type HTTPResponse = http.ServerResponse;
 
 // Downloads a zip file and replaces itself.
 export class SelfUpdater {
@@ -71,7 +76,7 @@ export class SelfUpdater {
       return;  // update check is not wanted.
     }
 
-    this.checkTimer = setTimeout(async () => {
+    this.checkTimer = delay(async () => {
       await this.check();
       this.scheduleCheck();  // Schedule the next check in an hour
     }, delayMs);
@@ -202,7 +207,7 @@ class FakeSquirrelServer {
   // Feeds the buffer to the updater via the proxy server.
   async install() {
     return await new Promise<void>((resolve, reject) => {
-      autoUpdater.on("update-downloaded", x => {
+      autoUpdater.on("update-downloaded", () => {
         Logger.log(`Update staged, will install on restart`);
         this.closeServer_();
         resolve();
@@ -255,7 +260,7 @@ class FakeSquirrelServer {
     if (!request.headers.authorization) {
       return this.serve401_(request, response, 'No authenthication info');
     }
-    if (request.headers.authorization.indexOf("Basic ") === -1) {
+    if (!request.headers.authorization.includes("Basic ")) {
       return this.serve401_(request, response, 'No authenthication basic info');
     }
 
@@ -383,7 +388,7 @@ export function handleSquirrelInstallerEvents() {
       // Install desktop and start menu shortcuts
       spawnUpdate(['--createShortcut', exeName]);
 
-      setTimeout(app.quit, 1000);
+      setTimeout(app.quit, 1000);  // eslint-disable-line
       return true;
 
     case '--squirrel-uninstall':
@@ -393,7 +398,7 @@ export function handleSquirrelInstallerEvents() {
       // Remove desktop and start menu shortcuts
       spawnUpdate(['--removeShortcut', exeName]);
 
-      setTimeout(app.quit, 1000);
+      setTimeout(app.quit, 1000);  // eslint-disable-line
       return true;
 
     case '--squirrel-obsolete':

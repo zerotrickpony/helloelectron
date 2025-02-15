@@ -34,7 +34,7 @@ export class ErrorReport {
     }
 
     ErrorReport.report = this.toReportText(e) + '\n\n' + ErrorReport.report;
-    fork(async x => await this.ipc.logCrash(ErrorReport.report));
+    fork(async () => await this.ipc.logCrash(ErrorReport.report));
     if (ErrorReport.currentReport) {
       ErrorReport.currentReport.update();
       return;
@@ -53,7 +53,7 @@ export class ErrorReport {
     // Copy button
     const copyButton = div.add('<button class=copy />').
         text('Copy Error Report to Clipboard').
-        click(async e => {
+        click(async () => {
           await navigator.clipboard.writeText(ErrorReport.report);
           copyButton.text('Copied!');
         });
@@ -63,7 +63,7 @@ export class ErrorReport {
     const dontask = checkrow.add('<input type=checkbox id=errorreportdontaskagain />');
     checkrow.add('<label for=errorreportdontaskagain />').
         text(`Don't show this again for this session. (But like seriously, you should restart)`);
-    dontask.on('input', async e => ErrorReport.reporterrors = !dontask.isChecked());
+    dontask.on('input', async () => ErrorReport.reporterrors = !dontask.isChecked());  // eslint-disable-line
     checkrow.hide();
 
     div.add('<div class=next />').
@@ -74,10 +74,10 @@ export class ErrorReport {
     const buttonbox = div.add('<div class=buttons />');
     buttonbox.add('<button class=restart />').
         text('Restart App').
-        click(async e => await ipc.quit(true));
+        click(async () => await ipc.quit(true));
     buttonbox.add('<button class=dismiss />').
         text('Try to keep going').
-        click(async e => this.dismiss());
+        click(async () => this.dismiss());  // eslint-disable-line
 
     // A special experience for repeat crashes!
     if (ErrorReport.lifetimeCrashCount > 1) {
@@ -119,7 +119,7 @@ export class ErrorReport {
 
     result += `\nRENDER TRACE:\n${e.stack}`;
 
-    const pfError = (e as any)['pfmainError'];
+    const pfError = (e as any).pfmainError;
     if (pfError) {
       result += `\nMAIN PROCESS TRACE:\n${pfError}`;
     }

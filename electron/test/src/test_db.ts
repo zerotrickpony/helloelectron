@@ -18,7 +18,7 @@ class TestDatabase extends BaseElectronTest {
     const recipe = recipes2[0];
     Logger.log(`Loaded one recipe: ${JSON.stringify(recipe)}`);
     ok(recipe.name === 'water');
-    ok(recipe.text.indexOf('just water') !== -1);
+    ok(recipe.text.includes('just water'));
   }
 }
 

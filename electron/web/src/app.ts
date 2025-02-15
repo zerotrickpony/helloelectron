@@ -8,7 +8,7 @@ export class App {
   ipc: IpcClient;
 
   constructor() {
-    if (App.INSTANCE) {
+    if (App.INSTANCE) {  // eslint-disable-line
       throw new Error(`Duplicate construction of App instance`);
     }
     App.INSTANCE = this;

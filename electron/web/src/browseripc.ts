@@ -1,4 +1,4 @@
-import {MainIpc, BrowserIpc, IpcResult, PlatformInfo, TestData} from '../../main/src/common/schema';
+import {MainIpc, BrowserIpc, PlatformInfo} from '../../main/src/common/schema';
 import {App} from './app';
 import {ErrorReport} from './util/crashes';
 
@@ -17,7 +17,7 @@ export class IpcHandler implements BrowserIpc {
     window.addEventListener('unhandledrejection', e => new ErrorReport(this.mainClient, e.reason));
     window.addEventListener('uncaughtexception', (e: ErrorEvent) => {
       // TODO: do these happen? Or same as error?
-      console.error(`uncaughtexception happened!!!1! ${e}`);
+      console.error(`uncaughtexception happened!!!1! ${e.error}`);
       new ErrorReport(this.mainClient, e.error);
     });
 
@@ -29,7 +29,7 @@ export class IpcHandler implements BrowserIpc {
   // Handles electron commands as if they were network requests
   private async handleIpc(command: string, args: any[]): Promise<void> {
     const handler = (this as any)[command] as (...args: any[]) => Promise<any>;
-    if (!handler) {
+    if (!handler) {  // eslint-disable-line
       throw new Error(`No such IPC command: ${command}`);
     }
 
@@ -38,12 +38,12 @@ export class IpcHandler implements BrowserIpc {
   }
 
   // Called from the main process when we are exiting; maybe Command-Q or maybe the quit() call.
-  async handleQuitting(): Promise<void> {
+  async handleQuitting(): Promise<void> {  // eslint-disable-line
     console.log(`Exiting...`);
   }
 
   // Called when the main process crashes.
-  async handleFatalError(error: string): Promise<void> {
+  async handleFatalError(error: string): Promise<void> {  // eslint-disable-line
     const e = new Error(`Main worker crash: ${error}`);
     (e as any).pfmainError = error;
     new ErrorReport(this.mainClient, e);
@@ -67,7 +67,7 @@ export class IpcHandler implements BrowserIpc {
 
 // Sends IPCs down to the main process, awaiting and returning results.
 export class IpcClient implements MainIpc {
-  platformInfo: PlatformInfo;  // Cached on first use
+  platformInfo?: PlatformInfo;  // Cached on first use
 
   // Sends an IPC command and returns the response.
   private async send(command: keyof MainIpc, args: any[]): Promise<any> {
@@ -93,9 +93,11 @@ export class IpcClient implements MainIpc {
       const info = await this.send('getPlatformInfo', []);
       if (info) {
         this.platformInfo = info;
+      } else {
+        throw new Error(`Could not get platform info`);
       }
     }
-    return this.platformInfo;
+    return this.platformInfo!;
   }
 
   // TODO - it would be nice to auto-generate these dispatchers since they're all the same.

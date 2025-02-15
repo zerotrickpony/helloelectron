@@ -16,9 +16,23 @@ export function sleep(ms: number): Promise<void> {
   });
 }
 
-// Starts an async function running "soon" and returns. Is this needed?
+// Starts an async function running "soon" and returns.
 export function fork(f: (...x: any[]) => any): any {
   return setTimeout(f, 1);
+}
+
+// Runs an async function after a timeout, returning the timeout ticket.
+export function delay<X>(f: (...x: any[]) => Promise<X>, timeoutMs: number): any {
+
+  return setTimeout(() => eat(f()), timeoutMs);
+}
+
+const DO_NOTHING_FN = () => {};
+const THROW_FN = (e: Error) => {console.error(e);};
+
+// Consumes a promise without awaiting it. Used to appease the promise linter.
+export function eat<X>(p: Promise<X>): void {
+  p.then(DO_NOTHING_FN, THROW_FN);
 }
 
 // A simple lock that runs one waiter at a time.

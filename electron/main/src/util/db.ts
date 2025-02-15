@@ -40,7 +40,7 @@ export abstract class BaseDB {
 
   // Connects to the database.
   async connect(): Promise<void> {
-    await this.startMutex.run(async x => {
+    await this.startMutex.run(async () => {
       if (this.db) {
         return;  // Already connected
       }
@@ -55,13 +55,13 @@ export abstract class BaseDB {
 
   // Disconnects from the database.
   async close(): Promise<void> {
-    return await this.startMutex.run(async x => {
-      return await this.txMutex.run(async x => {
+    return await this.startMutex.run(async () => {
+      return await this.txMutex.run(async () => {  // eslint-disable-line
         if (!this.db) {
           return;  // already closed
         }
         try {
-          await this.db.close();
+          this.db.close();
           this.db = undefined;
           this.statements.clear();
         } catch (e) {
@@ -85,25 +85,23 @@ export abstract class BaseDB {
   }
 
   // Runs a transaction
-  async transact<X>(fn: AsyncFN<X>): Promise<X> {
-    return await this.txMutex.run(async x => {
+  async transact<X>(fn: AsyncFN<X> | (() => X)): Promise<X> {
+    return await this.txMutex.run(async () => {
       if (this.inTransaction) {
         throw new Error(`Already in transaction`);
       }
       let success = false;
       try {
         this.inTransaction = true;
-        await this.runStatement('BEGIN TRANSACTION');
+        this.runStatement('BEGIN TRANSACTION');
         const result = await fn();
-        await this.runStatement('COMMIT');
+        this.runStatement('COMMIT');
         success = true;
         return result;
-      } catch (e) {
-        throw e;
       } finally {
         try {
           if (!success) {
-            await this.runStatement('ROLLBACK');
+            this.runStatement('ROLLBACK');
           }
         } finally {
           this.inTransaction = false;
@@ -113,7 +111,7 @@ export abstract class BaseDB {
   }
 
   // Runs a statement and gives a nicer stack trace for it.
-  protected async runStatement(sql: string, ...args: any[]): Promise<void> {
+  protected runStatement(sql: string, ...args: any[]): void {
     if (!this.inTransaction) {
       throw new Error(`All dbops must be in a transaction: ${sql}`);
     }
@@ -127,7 +125,7 @@ export abstract class BaseDB {
   }
 
   // Like above, but does db.all for multi-line result statements.
-  protected async getAll(sql: string, ...args: any[]): Promise<any[]> {
+  protected getAll(sql: string, ...args: any[]): any[] {
     if (!this.inTransaction) {
       throw new Error(`All dbops must be in a transaction: ${sql}`);
     }
@@ -141,7 +139,7 @@ export abstract class BaseDB {
   }
 
   // Like above, but does db.get for single-line result statements.
-  protected async getOne<X>(sql: string, ...args: any[]): Promise<X> {
+  protected getOne<X>(sql: string, ...args: any[]): X|undefined {
     if (!this.inTransaction) {
       throw new Error(`All dbops must be in a transaction: ${sql}`);
     }
@@ -156,8 +154,8 @@ export abstract class BaseDB {
 
   // Gives us a better stack trace if this is a SQLITE error
   private static rethrow(e: Error): never {
-    const eString = `${e}`;
-    if (eString.indexOf('SQLITE_ERROR') != -1) {
+    const eString = `${e}`;  // eslint-disable-line
+    if (eString.includes('SQLITE_ERROR')) {
       throw new Error(eString);  // Rethrow so that we get a proper stack trace
     } else {
       throw e;

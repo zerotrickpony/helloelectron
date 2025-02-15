@@ -1,12 +1,13 @@
 // This module runs from electronmain.js, BEFORE anything including the app definition.
 
-import {readFileSync, writeFileSync} from 'fs';
-import {join} from 'path';
-import {TestData, IpcResult} from '../../main/src/common/schema';
-import {Logger} from '../../main/src/logger';
-import {ALL_TESTS} from './common/commontesting';
-import {Main, SYSTEMTESTDATA} from '../../main/src/electronmain';
-import {ipcMain} from 'electron';
+import { ipcMain } from 'electron';
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { delay } from '../../main/src/common/commonutil';
+import { IpcResult, TestData } from '../../main/src/common/schema';
+import { Main, SYSTEMTESTDATA } from '../../main/src/electronmain';
+import { Logger } from '../../main/src/logger';
+import { ALL_TESTS } from './common/commontesting';
 
 // This runner executes the tests intended for the main process, and responds to test IPCs.
 export class TestRunner {
@@ -17,8 +18,8 @@ export class TestRunner {
     this.testData = t;
     const path = join(__dirname, '../testrunnerinfo.json');
     const runnerData: any = JSON.parse(readFileSync(path).toString());
-    t.testName = runnerData['testName'];
-    t.isWeb = runnerData['isWeb'];
+    t.testName = runnerData.testName;
+    t.isWeb = runnerData.isWeb;
 
     if (!t.testName) {
       throw new Error(`Malformed test runner info: ${path}`);
@@ -30,13 +31,16 @@ export class TestRunner {
     }
 
     // Listen for test commands from the web runner
-    ipcMain.handle('testcommand', async (e, req) => await this.handleTestIpc(req));
+    ipcMain.handle('testcommand', (e, req) => this.handleTestIpc(req));
   }
 
   // If a main process test is requested, launches it.
   async run(): Promise<void> {
     if (this.testData.isWeb) {
       return;  // do nothing, the render process runner will do the work instead.
+    }
+    if (!Main.INSTANCE?.win) {
+      throw new Error();
     }
 
     let result = 'success';
@@ -63,12 +67,15 @@ export class TestRunner {
 
     if (result === 'success') {
       // On a success we simply exit so we can go on to the next test.
-      Main.INSTANCE.ipc.quit(false);
+      await Main.INSTANCE.ipc.quit(false);
     }
   }
 
   // Called by the web runner (or maybe some other test utility code?)
-  private async handleTestIpc(req: {command: string, args: any[]}): Promise<IpcResult> {
+  private handleTestIpc(req: {command: string, args: any[]}): IpcResult {
+    if (!Main.INSTANCE?.win) {
+      throw new Error();
+    }
     if (req.command !== 'success') {
       Main.INSTANCE.win.webContents.openDevTools();
     }
@@ -89,4 +96,4 @@ const runner = new TestRunner(SYSTEMTESTDATA);
 
 // TODO - we'll just run the test right away, without caring about any particular ready condition.
 // it will be up to the app, and the test author, to decide when it's late enough to run.
-setTimeout(async () => await runner.run(), 500);
+delay(async () => await runner.run(), 500);

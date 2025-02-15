@@ -23,7 +23,7 @@ export class IpcHandler implements MainIpc {
   constructor(main: Main, opt_systemTestData?: TestData) {
     // TODO this.updater = new SelfUpdater(this);
     this.main = main;
-    this.win = main.win;
+    this.win = main.win!;
     this.browserClient = new IpcClient(this.win);
     this.db = main.db;
     this.updater = new SelfUpdater(this.browserClient);
@@ -38,7 +38,7 @@ export class IpcHandler implements MainIpc {
   async handleMainIpc(req: {command: string, args: any[]}): Promise<IpcResult> {
     const {command, args} = req;
     const handler = (this as any)[command] as (...args: any[]) => Promise<any>;
-    if (!handler) {
+    if (!handler) {  // eslint-disable-line
       return {error: `No such command: ${command}`};
     }
 
@@ -63,10 +63,10 @@ export class IpcHandler implements MainIpc {
       // Aww we feel bad that there's no recipes yet. Let's start you off.
       await this.db.addRecipe('First Recipe', `For this you'll need water.`);
     }
-    return await this.db.getRecipes();;
+    return await this.db.getRecipes();
   }
 
-  async getPlatformInfo(): Promise<PlatformInfo> {
+  async getPlatformInfo(): Promise<PlatformInfo> {  // eslint-disable-line @typescript-eslint/require-await
     Logger.log(`getPlatformInfo`);
     if (!this.platformInfo) {
       const updateUrl = readPackagePropertyFile('updateinfo.txt');
@@ -83,7 +83,7 @@ export class IpcHandler implements MainIpc {
     return this.platformInfo;
   }
 
-  async quit(relaunch: boolean = false, exitCode = 0): Promise<void> {
+  async quit(relaunch = false, exitCode = 0): Promise<void> {  // eslint-disable-line @typescript-eslint/require-await
     if (relaunch) {
       this.updater.relaunch();
     } else {
@@ -92,25 +92,25 @@ export class IpcHandler implements MainIpc {
   }
 
   // Called when the render process traps a crash
-  async logCrash(report: string): Promise<void> {
+  async logCrash(report: string): Promise<void> {  // eslint-disable-line @typescript-eslint/require-await
     this.main.countCrash();
     console.error(report);
   }
 
   // Same as above but is fired from the command Q handler.
-  async handleQuitEvent(e: Event): Promise<void> {
+  handleQuitEvent(e: Event): void {
     e.preventDefault();
     if (!this.win.isDestroyed()) {
       this.browserClient.handleQuitting();
     }
-    fork(x => this.quit(false));
+    fork(() => this.quit(false));
   }
 
-  async getTestData(): Promise<TestData> {
+  async getTestData(): Promise<TestData> {  // eslint-disable-line @typescript-eslint/require-await
     return this.systemTestData;
   }
 
-  async setTestData(property: keyof TestData, value: any): Promise<void> {
+  async setTestData(property: keyof TestData, value: any): Promise<void> {  // eslint-disable-line @typescript-eslint/require-await
     (this.systemTestData as any)[property] = value;
   }
 }
