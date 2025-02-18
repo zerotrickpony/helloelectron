@@ -43,7 +43,7 @@ export async function readFileLines(path) {
     crlfDelay: Infinity
   });
 
-  rl.on('line', async (line) => {
+  rl.on('line', (line) => {
     lines.push(line);
   });
   await events.once(rl, 'close');
@@ -135,6 +135,15 @@ export function listDirR(path) {
     }
   };
   rscan('');
+  return result;
+}
+
+// Same as listDirR but lists multiple directories, and assumes these are project paths.
+export function listProjectDirs(...projectPaths) {
+  const result = [];
+  for (const p of projectPaths) {
+    result.push(...listDirR(projectPath(p)));
+  }
   return result;
 }
 
@@ -364,7 +373,7 @@ export class WildcardMatcher {
       const remainder = absPattern.substring(nextpos);
       result += escaperegexp(s);
       if (!isWin && remainder.startsWith('**/')) {
-        result += '(.+\/)?';
+        result += '(.+/)?';
         pos = nextpos + 3;
       } else if (isWin && remainder.startsWith('**\\')) {
         result += '(.+\\\\)?';
@@ -407,7 +416,7 @@ async function spawnScript(cwd, commandAndArgs, setupFn) {
 
   const code = await s.getResult();
   if (code != 0) {
-    console.error(`Failed (${code}): ${commandAndArgs.join(' ')}`);
+    console.error(`Failed (${code}): ${commandAndArgs.join(' ')} - (cwd=${cwd})`);
     throw new Error('STOP_BUILD');
   }
 }

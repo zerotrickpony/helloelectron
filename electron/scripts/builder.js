@@ -7,7 +7,7 @@
 
 import fs from 'fs';
 import { basename, dirname } from 'path';
-import { compareMtime, execNpm, execNpmAndGetResult, execScript, projectPathExists, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
+import { compareMtime, execNpm, execNpmAndGetResult, execScript, projectPathExists, execScriptAndGetResult, getHighestMtime, getHighestTSCMtime, getSHA256, listDirR, listProjectDirs, parseJson, parseProjectJson, parseSecrets, projectPath, readTextFileOr, rewriteInPlace, rmProjectFile, runSteps, sleep, stripSourceMap, symlinkSync } from './_base.js';
 
 const COMMANDS = new Map([
   ['setup', ['First time installation and build',
@@ -278,6 +278,14 @@ async function buildCoverage() {
   symlinkSync(projectPath('test/package.json'), projectPath('out/coverage/test/package.json'));
   symlinkSync(projectPath('test/testmain_tsconfig.json'), projectPath('out/coverage/test/testmain_tsconfig.json'));
   symlinkSync(projectPath('test/testweb_tsconfig.json'), projectPath('out/coverage/test/testweb_tsconfig.json'));
+
+  // Silence tsc for all generated files, since a lot of them aren't correct Typescript even though they are valid Javascript
+  for (const tsFile of listProjectDirs('out/coverage/main/src', 'out/coverage/web/src', 'out/coverage/test/src', 'out/coverage/test/websrc')) {
+    if (tsFile.endsWith('.ts')) {
+      const text = '// @ts-nocheck\n' + fs.readFileSync(tsFile);
+      fs.writeFileSync(tsFile, text);
+    }
+  }
 
   // Once we have instrumented TS we can build it
   const tsc = projectPath('main/node_modules/.bin/tsc');
