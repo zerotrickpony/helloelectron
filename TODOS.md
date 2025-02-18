@@ -46,3 +46,14 @@
 - the default behavior of the app shows an ugly printout, this is not a good demo.
 - demonstrate mixing in raw JS?
 - backport all my web test matchers into this example
+- ✅ Get test coverage working
+  - ✅ Look at instanbul.js
+  - ✅ Setup tips:
+    - Install nyc which is a CLI for istanbul: https://github.com/istanbuljs/nyc
+    - Some inheritance nonsense for typescript projects: https://www.npmjs.com/package/@istanbuljs/nyc-config-typescript
+  - ✅ Pre-instrument the code, this is necessary because we have a custom runner: https://github.com/istanbuljs/nyc/blob/main/docs/instrument.md
+  - ✅ Reporting:
+    - Generate report from __coverage__ object
+    - Output the contents of window.__coverage__ (assuming it's in Istanbul 1.0 format) to .nyc_output/out.json.
+    - To generate HTML report for example, run: nyc report --reporter=html
+    - There is a merge tool for multiple coverage runs, will need this

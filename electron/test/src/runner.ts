@@ -3,7 +3,7 @@
 import { ipcMain } from 'electron';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { delay } from '../../main/src/common/commonutil';
+import { delay, eat } from '../../main/src/common/commonutil';
 import { IpcResult, TestData } from '../../main/src/common/schema';
 import { Main, SYSTEMTESTDATA } from '../../main/src/electronmain';
 import { Logger } from '../../main/src/logger';
@@ -67,6 +67,7 @@ export class TestRunner {
 
     if (result === 'success') {
       // On a success we simply exit so we can go on to the next test.
+      this.saveMainCoverage();
       await Main.INSTANCE.ipc.quit(false);
     }
   }
@@ -86,9 +87,33 @@ export class TestRunner {
       writeFileSync(join(__dirname, '../testresult.json'), JSON.stringify({testName, result}));
       return {response: true};
 
+    } else if (req.command === 'savecoverage') {
+      this.writeCoverageFile(req.args[0] as string);
+      return {response: true};
+
+    } else if (req.command === 'quit') {
+      // Save the coverage report and then exit
+      this.saveMainCoverage();
+      eat(Main.INSTANCE.ipc.quit(false));
+      return {response: true};
+
     } else {
       throw new Error(`Unexpected test command: ${req.command}`);
     }
+  }
+
+  // Stores the coverage data, if there was any.
+  private saveMainCoverage() {
+    if ((global as any)?.__coverage__) {
+      const s = JSON.stringify((global as any)?.__coverage__);
+      this.writeCoverageFile(s);
+    }
+  }
+
+  // Writes a new coverage file with the given contents
+  private writeCoverageFile(data: string) {
+    const filename = `../../coverage/data/test_${Date.now()}_${Math.round(Math.random() * 10000000)}.json`;
+    writeFileSync(join(__dirname, filename), data);
   }
 }
 

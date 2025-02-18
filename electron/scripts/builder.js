@@ -19,17 +19,19 @@ const COMMANDS = new Map([
   ['veryclean', ['Erases all build output and NPM packages',
       cleanOut, cleanNpm]],
   ['build', ['Builds the electron project for development mode',
-      setLock, buildMain, buildWeb, buildCss]],
+      setLock, checkInstall, buildMain, buildWeb, buildCss]],
   ['icons', ['Generates the icon files the packaged Electron app',
-      setLock, buildIcons]],
+      setLock, checkInstall, buildIcons]],
   ['lint', ['Runs eslint on the codebase',
-      setLock, buildMain, buildWeb, buildCss, lint, removeLock]],
+      setLock, checkInstall, buildMain, buildWeb, buildCss, lint, removeLock]],
   ['run', ['Builds and runs the Electron app in development mode',
-      cleanIfTest, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
+      cleanIfTest, setLock, checkInstall, buildMain, buildWeb, buildCss, removeLock, runDev]],
   ['checkdeps', ['Checks for circular dependencies in the typescript.',
-      checkDeps]],
+      checkInstall, checkDeps]],
   ['test', ['Builds the test harness and runs each test',
-      setLock, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, lint, runTests]],
+      setLock, checkInstall, buildMain, buildWeb, buildCss, buildTest, removeLock, checkDeps, lint, runTests]],
+  ['coverage', ['Runs the full test harness with coverage instrumentation and shows an HTML report',
+      setLock, checkInstall, cleanOut, buildCoverage, buildCss, removeLock, runTests, reportCoverage]],
   ['help', ['Prints this help message',
       printHelp]],
   ['explain', ['Prints the detailed steps that each command performs',
@@ -37,19 +39,19 @@ const COMMANDS = new Map([
 
   // Packaging / release / distribution stuff
   ['package', ['Packages a distributable Electron binary for the current platform',
-      setLock, cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
+      setLock, checkInstall, cleanOut, buildMain, buildWeb, buildCss, checkDeps, buildIcons, packageElectron]],
   ['notarize', ['(MacOS only) runs notarytool and creates signatures. Only do this right after package',
       notarizeDarwin]],
   ['notarizex64', ['(MacOS only) runs notarytool on a supplied x64 app expected in out/dist',
       notarizeDarwinX64]],
   ['packagesource', ['Packages buildable source tarball for Linux',
-      cleanOut, packageSrc]],
+      cleanOut, checkInstall, packageSrc]],
 
   // Combo helpers
   ['cleanbuild', ['Same as "clean" and then "build"',
-      cleanOut, setLock, buildMain, buildWeb, buildCss]],
+      cleanOut, checkInstall, setLock, buildMain, buildWeb, buildCss]],
   ['cleanrun', ['Same as "clean" and then "run"',
-      cleanOut, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
+      cleanOut, checkInstall, setLock, buildMain, buildWeb, buildCss, removeLock, runDev]],
 
   // Partial commands for incremental build; these are faster but don't ensure a consistent build.
   ['buildmain', ['Builds the electron project for development mode',
@@ -76,6 +78,7 @@ const EXPLAIN = new Map([
   [cleanOut, 'Erases all build and package output'],
   [cleanNpm, 'Erases all node_modules so they can be npm installed again'],
   [checkVersions, 'Checks the tool versions of Python, Node, and NPM'],
+  [checkInstall, `Fails if node_modules isn't present`],
   [install, 'Performs NPM install on both main and render process sub-modules'],
   [buildMain, 'Build typescript and electron dependencies for the main process'],
   [buildWeb, 'Builds typescript into compiled.js and electron dependencies for the render process'],
@@ -84,6 +87,8 @@ const EXPLAIN = new Map([
   [buildIcons, 'Generates app icons for the current platform.'],
   [packageElectron, 'Packages a distributable Electron binary for the current platform.'],
   [buildTest, 'Builds all typescript for main and test, including test code'],
+  [buildCoverage, 'Builds main and web with code coverage instrumentation'],
+  [reportCoverage, 'Writes out an HTML report based on the coverage data found'],
   [checkDeps, 'Checks the codebase for circular module dependencies'],
   [runTests, 'Runs every test_blah.ts file and stops if any of them fail'],
   [runOneTest, 'Runs the given test_blah.ts file'],
@@ -161,6 +166,12 @@ async function install() {
 
 // Builds the main process code
 async function buildMain() {
+  await tscMain();
+  await placeMain();
+}
+
+// Runs tsc on the main process code
+async function tscMain() {
   const main = projectPath('main');
   const touchfile = projectPath('out/tscdone_main.touch');
 
@@ -170,7 +181,10 @@ async function buildMain() {
     await execScript(main, tsc, '--project', 'main_tsconfig.json');
     fs.writeFileSync(touchfile, 'tsc run for component: main');
   }
+}
 
+// Post-tsc fixups for electron main process
+async function placeMain() {
   // The source map for electronpreload.ts can never work because it's unservable
   stripSourceMap(projectPath('out/build/electronpreload.js'));
 
@@ -180,7 +194,14 @@ async function buildMain() {
   symlinkSync(projectPath('main/package.json'), projectPath('out/build/package.json'));
 }
 
+// Builds the render process code
 async function buildWeb() {
+  await tscWeb();
+  await placeWeb();
+}
+
+// Runs tsc on the web process code in the given directory
+async function tscWeb() {
   const web = projectPath('web');
   const touchfile = projectPath('out/tscdone_web.touch');
 
@@ -190,7 +211,10 @@ async function buildWeb() {
     await execScript(web, tsc, '--project', 'web_tsconfig.json');
     fs.writeFileSync(touchfile, 'tsc run for component: web');
   }
+}
 
+// Post-tsc fixups for electron render process
+async function placeWeb() {
   // Forward static resources and typescript source
   fs.mkdirSync(projectPath('out/build/web/web'), {recursive: true});
   fs.mkdirSync(projectPath('out/build/web/main/src'), {recursive: true});
@@ -225,6 +249,68 @@ function checkTscDone(touchfile, tsconfig) {
     return false;  // no sources parsed
   }
   return (srctime < touchtime);
+}
+
+// Instruments all the code with Istanbul coverage counters, and then builds in test mode.
+async function buildCoverage() {
+  // Istanbul instruments the TS, not the JS, so we actually need to pre-pre-compile lol
+  const nyc = projectPath('main/node_modules/.bin/nyc');
+  await execScript(projectPath('main'), nyc, 'instrument', 'src', '../out/coverage/main/src');
+  await execScript(projectPath('web'), nyc, 'instrument', 'src', '../out/coverage/web/src');
+
+  // The test source needs to be placed with the instrumented code for it to build, but we don't actually need it to be instrumented.
+  // Istanbul will not find a config file so it will just pass the code through.
+  await execScript(projectPath('test'), nyc, 'instrument', 'src', '../out/coverage/test/src');
+  await execScript(projectPath('test'), nyc, 'instrument', 'websrc', '../out/coverage/test/websrc');
+
+  // Place configs and dependencies in the coverage source area so tsc can make sense of it
+  symlinkSync(projectPath('main/node_modules'), projectPath('out/coverage/main/node_modules'));
+  symlinkSync(projectPath('main/lib'), projectPath('out/coverage/main/lib'));
+  symlinkSync(projectPath('main/package.json'), projectPath('out/coverage/main/package.json'));
+  symlinkSync(projectPath('main/main_tsconfig.json'), projectPath('out/coverage/main/main_tsconfig.json'));
+
+  symlinkSync(projectPath('web/node_modules'), projectPath('out/coverage/web/node_modules'));
+  symlinkSync(projectPath('web/lib'), projectPath('out/coverage/web/lib'));
+  symlinkSync(projectPath('web/package.json'), projectPath('out/coverage/web/package.json'));
+  symlinkSync(projectPath('web/web_tsconfig.json'), projectPath('out/coverage/web/web_tsconfig.json'));
+
+  symlinkSync(projectPath('test/node_modules'), projectPath('out/coverage/test/node_modules'));
+  symlinkSync(projectPath('test/package.json'), projectPath('out/coverage/test/package.json'));
+  symlinkSync(projectPath('test/testmain_tsconfig.json'), projectPath('out/coverage/test/testmain_tsconfig.json'));
+  symlinkSync(projectPath('test/testweb_tsconfig.json'), projectPath('out/coverage/test/testweb_tsconfig.json'));
+
+  // Once we have instrumented TS we can build it
+  const tsc = projectPath('main/node_modules/.bin/tsc');
+  const cmain = projectPath('out/coverage/main');
+  const cweb = projectPath('out/coverage/web');
+  const ctest = projectPath('out/coverage/test');
+  await execScript(cmain, tsc, '--project', 'main_tsconfig.json');
+  await execScript(cweb, tsc, '--project', 'web_tsconfig.json');
+  await execScript(ctest, tsc, '--project', 'testmain_tsconfig.json');
+  await execScript(ctest, tsc, '--project', 'testweb_tsconfig.json');
+
+  // This puts output in the wrong place so we move it back when its done
+  fs.renameSync(projectPath('out/coverage/out/testtsc'), projectPath('out/testtsc'));
+  fs.renameSync(projectPath('out/coverage/out/build'), projectPath('out/build'));
+  fs.mkdirSync(projectPath('out/coverage/data'), {recursive: true});
+
+  // Once the instrumented version of the tsc output is in place, we can then do the rest of our fixups
+  await placeMain();
+  await placeWeb();
+  await setupTest();
+}
+
+// Assuming the tests have all finished running in instrumented mode, collects the data into an HTML report.
+async function reportCoverage() {
+  const cwd = projectPath('.');
+  const nyc = projectPath('main/node_modules/.bin/nyc');
+
+  // Merge the output into one file, since the reporter wil only read coverage.json
+  await execScript(cwd, nyc, 'merge', projectPath('out/coverage/data'), projectPath('out/coverage.json'));
+
+  // Run from the root CWD so it can find both main and web files
+  await execScript(cwd, nyc, 'report', '--reporter', 'html', '--temp-dir', 'out', '--report-dir', 'out/coverage/report');
+  console.log(`Coverage report at: ${projectPath('out/coverage/report/index.html')}`);
 }
 
 async function buildCss() {
@@ -299,6 +385,14 @@ async function runDev(...args) {
   const p = projectPath('out/build');
   const electron = projectPath('out/build/node_modules/.bin/electron');
   await execScript(p, electron, '.', ...args);
+}
+
+async function checkInstall() {
+  if (!projectPathExists('main/node_modules') ||
+      !projectPathExists('web/node_modules')) {
+    console.error(`ERROR: Missing one or more node_modules, did you run "node scripts/builder.js setup"?`);
+    process.exit(1);
+  }
 }
 
 async function checkVersions() {
@@ -638,6 +732,11 @@ async function packageSrc() {
 
 // Builds the main process code with the testing harness installed
 async function buildTest() {
+  await tscTest();
+  await setupTest();
+}
+
+async function tscTest() {
   // NOTE: tsc could probably be short-circuited but since we modify the source in place
   // it makes it complicated to detect and re-run the right parts of the test build.
   // Replace the compiled typescript with our versions
@@ -645,7 +744,9 @@ async function buildTest() {
   const tsc = projectPath('main/node_modules/.bin/tsc');
   await execScript(test, tsc, '--project', 'testmain_tsconfig.json');
   await execScript(test, tsc, '--project', 'testweb_tsconfig.json');
+}
 
+async function setupTest() {
   // Find all the tests and register them
   const webTests = findTestNames_('test/websrc');
   const mainTests = findTestNames_('test/src');
@@ -770,7 +871,6 @@ async function runTests(opt_specificTest, opt_retest) {
   } else if (n >= 1) {
     console.log(`ALL TESTS PASSED (${n})`);
   }
-  process.exit(0);
 }
 
 // Runs one test

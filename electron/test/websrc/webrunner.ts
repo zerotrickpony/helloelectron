@@ -32,11 +32,18 @@ export class WebTestRunner {
 
     // The main process test runner will report this result via a testresult.json file
     const w: any = window;
+
+    if (w?.__coverage__) {
+      const s = JSON.stringify(w?.__coverage__);
+      await w.electronAPI.testcommand({command: 'savecoverage', args: [s]});
+    }
+
     await w.electronAPI.testcommand({command: result, args: []});
 
     if (result === 'success') {
       // On a success we simply exit so we can go on to the next test.
-      await App.INSTANCE.ipc.quit(false, 0);
+      // This will also save main process coverage data if there was any.
+      await w.electronAPI.testcommand({command: 'quit', args: []});
     }
   }
 }
